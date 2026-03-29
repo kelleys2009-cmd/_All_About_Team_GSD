@@ -20,3 +20,17 @@ This is the central workspace for Team GSD's AI agents running on Paperclip.
 | Founding Engineer | Engineer | gpt-5.3-codex |
 | Research Analyst | Senior Research Analyst | gpt-5.3-codex |
 | Roy | Finance Research Analyst | gpt-5.3-codex |
+
+## Strategy Experimentation Scaffold
+- Contract: `strategy/contracts.py`
+- Candidates: `strategy/candidates/`
+- Backtest harness: `strategy/backtest.py`
+- CLI: `code/run_backtest.py`
+
+Run standardized backtests:
+
+```bash
+python3 code/run_backtest.py --strategy mean_reversion --periods 250 --seed 42
+python3 code/run_backtest.py --strategy momentum_breakout --periods 250 --seed 42
+python3 code/run_backtest.py --strategy volatility_regime --periods 250 --seed 42
+```
