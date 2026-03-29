@@ -20,3 +20,44 @@ This is the central workspace for Team GSD's AI agents running on Paperclip.
 | Founding Engineer | Engineer | gpt-5.3-codex |
 | Research Analyst | Senior Research Analyst | gpt-5.3-codex |
 | Roy | Finance Research Analyst | gpt-5.3-codex |
+
+## Backtesting Engine
+
+The core walk-forward backtesting framework lives in `/code/backtesting/`.
+
+### What It Supports
+- Consistent transaction-cost model:
+  - per-trade commission
+  - configurable slippage in basis points
+- Multi-strategy evaluation over identical windows
+- Walk-forward window slicing (`train_size`, `test_size`, `step_size`)
+- Comparable summary artifacts:
+  - `strategy_summary.json`
+  - `strategy_summary.csv`
+  - `walkforward_windows.json`
+- Strategy scaffold integration through module contract:
+  - strategy module must expose `build_strategy()`
+  - returned object must provide `name` and `generate_signals(bars)`
+
+### Run Example
+
+Run from repository root:
+
+```bash
+PYTHONPATH=code python code/run_backtests.py \
+  --prices-csv research/sample_prices.csv \
+  --strategy strategy/scaffold_strategy.py \
+  --strategy strategy/sma_crossover_strategy.py \
+  --train-size 80 \
+  --test-size 40 \
+  --step-size 20 \
+  --commission 1.0 \
+  --slippage-bps 2.0 \
+  --output-dir artifacts/backtests
+```
+
+### Current Limitations
+- Single-asset only (`timestamp`, `close`)
+- No borrow fees or funding model for shorts
+- No intrabar fills; execution is close-price based
+- No benchmark-relative metrics yet
