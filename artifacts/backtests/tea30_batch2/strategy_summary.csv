@@ -1,0 +1,4 @@
+strategy_name,average_total_return,average_sharpe_ratio,average_max_drawdown,total_trades,windows
+bab_proxy_single_asset,6.560999999405404e-07,0.060588132749421875,-1.270682919934929e-05,6,2
+buy_and_hold,0.0001242398999999894,15.011604299085601,-7.999526108914967e-06,2,2
+vol_managed_tsmom_proxy,8.173139999989587e-05,8.836091117818052,-1.0268599999974093e-05,2,2

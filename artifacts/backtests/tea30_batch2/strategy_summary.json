@@ -1,0 +1,23 @@
+{
+  "bab_proxy_single_asset": {
+    "average_max_drawdown": -1.270682919934929e-05,
+    "average_sharpe_ratio": 0.060588132749421875,
+    "average_total_return": 6.560999999405404e-07,
+    "total_trades": 6.0,
+    "windows": 2.0
+  },
+  "buy_and_hold": {
+    "average_max_drawdown": -7.999526108914967e-06,
+    "average_sharpe_ratio": 15.011604299085601,
+    "average_total_return": 0.0001242398999999894,
+    "total_trades": 2.0,
+    "windows": 2.0
+  },
+  "vol_managed_tsmom_proxy": {
+    "average_max_drawdown": -1.0268599999974093e-05,
+    "average_sharpe_ratio": 8.836091117818052,
+    "average_total_return": 8.173139999989587e-05,
+    "total_trades": 2.0,
+    "windows": 2.0
+  }
+}
