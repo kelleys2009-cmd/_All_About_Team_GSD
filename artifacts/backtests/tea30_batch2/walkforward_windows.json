@@ -1,0 +1,68 @@
+[
+  {
+    "strategies": {
+      "bab_proxy_single_asset": {
+        "annualized_return": -6.41015950562096e-05,
+        "max_drawdown": -1.4559058398644353e-05,
+        "sharpe_ratio": -0.8064722057634065,
+        "total_return": -4.83320000010945e-06,
+        "trade_count": 3.0,
+        "win_rate": 0.10526315789473684
+      },
+      "buy_and_hold": {
+        "annualized_return": 0.001708951079762988,
+        "max_drawdown": -7.999530045266212e-06,
+        "sharpe_ratio": 15.346178698480282,
+        "total_return": 0.00012874780000005082,
+        "trade_count": 1.0,
+        "win_rate": 0.7894736842105263
+      },
+      "vol_managed_tsmom_proxy": {
+        "annualized_return": 0.0011112113654001554,
+        "max_drawdown": -1.0261199999916926e-05,
+        "sharpe_ratio": 8.758940750135855,
+        "total_return": 8.373879999989953e-05,
+        "trade_count": 1.0,
+        "win_rate": 0.5263157894736842
+      }
+    },
+    "test_end": "2025-03-01T00:00:00",
+    "test_start": "2025-02-10T00:00:00",
+    "train_end": "2025-02-09T00:00:00",
+    "train_start": "2025-01-01T00:00:00",
+    "window_index": 0
+  },
+  {
+    "strategies": {
+      "bab_proxy_single_asset": {
+        "annualized_return": 8.151048187832188e-05,
+        "max_drawdown": -1.0854600000054226e-05,
+        "sharpe_ratio": 0.9276484712622503,
+        "total_return": 6.145399999990531e-06,
+        "trade_count": 3.0,
+        "win_rate": 0.21052631578947367
+      },
+      "buy_and_hold": {
+        "annualized_return": 0.0015891907873930577,
+        "max_drawdown": -7.999522172563722e-06,
+        "sharpe_ratio": 14.67702989969092,
+        "total_return": 0.00011973199999992801,
+        "trade_count": 1.0,
+        "win_rate": 0.7894736842105263
+      },
+      "vol_managed_tsmom_proxy": {
+        "annualized_return": 0.001057909043903571,
+        "max_drawdown": -1.027600000003126e-05,
+        "sharpe_ratio": 8.913241485500249,
+        "total_return": 7.972399999989221e-05,
+        "trade_count": 1.0,
+        "win_rate": 0.5789473684210527
+      }
+    },
+    "test_end": "2025-03-11T00:00:00",
+    "test_start": "2025-02-20T00:00:00",
+    "train_end": "2025-02-19T00:00:00",
+    "train_start": "2025-01-11T00:00:00",
+    "window_index": 1
+  }
+]
