@@ -25,6 +25,7 @@
 `market_data/alert_notifiers.py`
 - Adapter helpers to dispatch routed alerts to channel-specific senders.
 - Includes deterministic dispatch accounting (`sent`/`dropped`).
+- Includes concrete webhook/slack sender classes with timeout + retry policy.
 
 ## Tests
 
