@@ -7,7 +7,16 @@ from .normalization import (
     normalize_ohlcv_payload,
 )
 from .ingestion_worker import CheckpointedIngestionWorker, IngestionWorkerConfig
-from .ingestion_alerts import IngestionAlert, IngestionObservation, IngestionSLOConfig, evaluate_ingestion_slo
+from .ingestion_alerts import (
+    IngestionAlert,
+    IngestionAlertPolicy,
+    IngestionObservation,
+    IngestionSLOConfig,
+    RoutedIngestionAlert,
+    dedupe_ingestion_alerts,
+    evaluate_ingestion_slo,
+    route_ingestion_alerts,
+)
 from .raw_store import (
     PostgresRawEventStore,
     RawMarketEvent,
@@ -29,7 +38,11 @@ __all__ = [
     "IngestionSLOConfig",
     "IngestionObservation",
     "IngestionAlert",
+    "IngestionAlertPolicy",
+    "RoutedIngestionAlert",
     "evaluate_ingestion_slo",
+    "route_ingestion_alerts",
+    "dedupe_ingestion_alerts",
     "RawMarketEvent",
     "ReplayCheckpoint",
     "SqliteRawEventStore",

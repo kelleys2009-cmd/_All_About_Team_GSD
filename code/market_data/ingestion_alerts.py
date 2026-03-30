@@ -24,6 +24,18 @@ class IngestionAlert:
     message: str
 
 
+@dataclass(frozen=True)
+class IngestionAlertPolicy:
+    channel: str
+    dedup_window_ms: int
+
+
+@dataclass(frozen=True)
+class RoutedIngestionAlert:
+    alert: IngestionAlert
+    channel: str
+
+
 def evaluate_ingestion_slo(
     observation: IngestionObservation,
     config: IngestionSLOConfig,
@@ -67,3 +79,40 @@ def evaluate_ingestion_slo(
         )
 
     return alerts
+
+
+def route_ingestion_alerts(
+    alerts: list[IngestionAlert],
+    policy_by_name: dict[str, IngestionAlertPolicy],
+    default_channel: str = "ops",
+) -> list[RoutedIngestionAlert]:
+    routed: list[RoutedIngestionAlert] = []
+    for alert in alerts:
+        policy = policy_by_name.get(alert.name)
+        routed.append(
+            RoutedIngestionAlert(
+                alert=alert,
+                channel=default_channel if policy is None else policy.channel,
+            )
+        )
+    return routed
+
+
+def dedupe_ingestion_alerts(
+    alerts: list[IngestionAlert],
+    *,
+    policy_by_name: dict[str, IngestionAlertPolicy],
+    now_ms: int,
+    last_sent_ms: dict[str, int] | None = None,
+) -> tuple[list[IngestionAlert], dict[str, int]]:
+    state = {} if last_sent_ms is None else dict(last_sent_ms)
+    filtered: list[IngestionAlert] = []
+    for alert in alerts:
+        policy = policy_by_name.get(alert.name)
+        dedup_window_ms = 0 if policy is None else policy.dedup_window_ms
+        last_sent = state.get(alert.name)
+        if last_sent is not None and now_ms - last_sent < dedup_window_ms:
+            continue
+        state[alert.name] = now_ms
+        filtered.append(alert)
+    return filtered, state

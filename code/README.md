@@ -20,6 +20,7 @@
 `market_data/ingestion_alerts.py`
 - SLO threshold evaluator for ingestion lag/retry/idle signals.
 - Produces alert records that can be routed to incident systems.
+- Includes channel policy mapping and de-dup window filtering helpers.
 
 ## Tests
 
