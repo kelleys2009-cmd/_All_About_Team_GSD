@@ -9,6 +9,8 @@
 - Raw event persistence and deterministic replay primitives.
 - Includes local SQLite writer, Postgres/Timescale runtime writer, and schema helpers.
 - Includes replay checkpoint persistence for long-running ingestion jobs.
+- Includes checkpoint-aware replay resume (`replay_after_checkpoint`) with optional bounded windows.
+- Includes ingestion auto-advance helper (`append_and_advance_checkpoint`) for daemon workers.
 
 ## Tests
 

@@ -113,6 +113,105 @@ class RawStoreTests(unittest.TestCase):
         self.assertIn("market_data_replay_checkpoints", ddl)
         self.assertIn("PRIMARY KEY (venue, symbol, timeframe)", ddl)
 
+    def test_replay_after_checkpoint_resumes_after_last_processed_event(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            store = SqliteRawEventStore(Path(tmp) / "raw_events.db")
+            store.append_events(
+                [
+                    RawMarketEvent(
+                        venue="BINANCE_PERP",
+                        symbol="BTC-USD-PERP",
+                        timeframe="1m",
+                        event_time_ms=1000,
+                        ingest_seq=1,
+                        source="binance_ws",
+                        payload_version="binance_trade_v1",
+                        payload={"price": "100.0"},
+                    ),
+                    RawMarketEvent(
+                        venue="BINANCE_PERP",
+                        symbol="BTC-USD-PERP",
+                        timeframe="1m",
+                        event_time_ms=1000,
+                        ingest_seq=2,
+                        source="binance_ws",
+                        payload_version="binance_trade_v1",
+                        payload={"price": "101.0"},
+                    ),
+                    RawMarketEvent(
+                        venue="BINANCE_PERP",
+                        symbol="BTC-USD-PERP",
+                        timeframe="1m",
+                        event_time_ms=1001,
+                        ingest_seq=1,
+                        source="binance_ws",
+                        payload_version="binance_trade_v1",
+                        payload={"price": "102.0"},
+                    ),
+                ]
+            )
+            store.upsert_checkpoint(
+                ReplayCheckpoint(
+                    venue="BINANCE_PERP",
+                    symbol="BTC-USD-PERP",
+                    timeframe="1m",
+                    last_event_time_ms=1000,
+                    last_ingest_seq=1,
+                )
+            )
+
+            replay = store.replay_after_checkpoint(
+                venue="BINANCE_PERP",
+                symbol="BTC-USD-PERP",
+                timeframe="1m",
+            )
+            self.assertEqual([(e.event_time_ms, e.ingest_seq) for e in replay], [(1000, 2), (1001, 1)])
+
+            bounded = store.replay_after_checkpoint(
+                venue="BINANCE_PERP",
+                symbol="BTC-USD-PERP",
+                timeframe="1m",
+                max_events=1,
+            )
+            self.assertEqual([(e.event_time_ms, e.ingest_seq) for e in bounded], [(1000, 2)])
+
+    def test_append_and_advance_checkpoint_updates_cursor(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            store = SqliteRawEventStore(Path(tmp) / "raw_events.db")
+            inserted, checkpoint = store.append_and_advance_checkpoint(
+                events=[
+                    RawMarketEvent(
+                        venue="KRAKEN",
+                        symbol="ETH-USD",
+                        timeframe="1m",
+                        event_time_ms=2000,
+                        ingest_seq=1,
+                        source="kraken_ws",
+                        payload_version="kraken_trade_v1",
+                        payload={"price": "2500.0"},
+                    ),
+                    RawMarketEvent(
+                        venue="KRAKEN",
+                        symbol="ETH-USD",
+                        timeframe="1m",
+                        event_time_ms=2000,
+                        ingest_seq=3,
+                        source="kraken_ws",
+                        payload_version="kraken_trade_v1",
+                        payload={"price": "2501.0"},
+                    ),
+                ]
+            )
+            self.assertEqual(inserted, 2)
+            assert checkpoint is not None
+            self.assertEqual(checkpoint.last_event_time_ms, 2000)
+            self.assertEqual(checkpoint.last_ingest_seq, 3)
+
+            loaded = store.get_checkpoint(venue="KRAKEN", symbol="ETH-USD", timeframe="1m")
+            assert loaded is not None
+            self.assertEqual(loaded.last_event_time_ms, 2000)
+            self.assertEqual(loaded.last_ingest_seq, 3)
+
 
 if __name__ == "__main__":
     unittest.main()

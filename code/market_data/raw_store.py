@@ -28,6 +28,15 @@ class ReplayCheckpoint:
     last_ingest_seq: int
 
 
+def _validate_single_stream(events: list[RawMarketEvent]) -> tuple[str, str, str]:
+    first = events[0]
+    stream_key = (first.venue, first.symbol, first.timeframe)
+    for ev in events[1:]:
+        if (ev.venue, ev.symbol, ev.timeframe) != stream_key:
+            raise ValueError("append_and_advance_checkpoint requires events from a single stream key")
+    return stream_key
+
+
 def timescaledb_schema_sql(table_name: str = "market_data_raw_events") -> str:
     return f"""
 CREATE TABLE IF NOT EXISTS {table_name} (
@@ -188,6 +197,78 @@ class SqliteRawEventStore:
             for row in rows
         ]
 
+    def replay_after_checkpoint(
+        self,
+        *,
+        venue: str,
+        symbol: str,
+        timeframe: str,
+        max_events: int | None = None,
+    ) -> list[RawMarketEvent]:
+        checkpoint = self.get_checkpoint(venue=venue, symbol=symbol, timeframe=timeframe)
+        query = """
+            SELECT venue, symbol, timeframe, event_time_ms, ingest_seq,
+                   source, payload_version, payload_json
+            FROM market_data_raw_events
+            WHERE venue = ? AND symbol = ? AND timeframe = ?
+        """
+        params: list[Any] = [venue, symbol, timeframe]
+        if checkpoint is not None:
+            query += """
+                AND (
+                    event_time_ms > ?
+                    OR (event_time_ms = ? AND ingest_seq > ?)
+                )
+            """
+            params.extend(
+                [
+                    int(checkpoint.last_event_time_ms),
+                    int(checkpoint.last_event_time_ms),
+                    int(checkpoint.last_ingest_seq),
+                ]
+            )
+        query += " ORDER BY event_time_ms ASC, ingest_seq ASC"
+        if max_events is not None:
+            query += " LIMIT ?"
+            params.append(int(max_events))
+
+        with self._connect() as conn:
+            rows = conn.execute(query, params).fetchall()
+
+        return [
+            RawMarketEvent(
+                venue=row["venue"],
+                symbol=row["symbol"],
+                timeframe=row["timeframe"],
+                event_time_ms=int(row["event_time_ms"]),
+                ingest_seq=int(row["ingest_seq"]),
+                source=row["source"],
+                payload_version=row["payload_version"],
+                payload=json.loads(row["payload_json"]),
+            )
+            for row in rows
+        ]
+
+    def append_and_advance_checkpoint(
+        self, *, events: Iterable[RawMarketEvent]
+    ) -> tuple[int, ReplayCheckpoint | None]:
+        event_list = list(events)
+        inserted = self.append_events(event_list)
+        if not event_list:
+            return inserted, None
+
+        venue, symbol, timeframe = _validate_single_stream(event_list)
+        latest = max(event_list, key=lambda ev: (int(ev.event_time_ms), int(ev.ingest_seq)))
+        checkpoint = ReplayCheckpoint(
+            venue=venue,
+            symbol=symbol,
+            timeframe=timeframe,
+            last_event_time_ms=int(latest.event_time_ms),
+            last_ingest_seq=int(latest.ingest_seq),
+        )
+        self.upsert_checkpoint(checkpoint)
+        return inserted, checkpoint
+
     def upsert_checkpoint(self, checkpoint: ReplayCheckpoint) -> None:
         with self._connect() as conn:
             conn.execute(
@@ -337,6 +418,79 @@ class PostgresRawEventStore:
             )
             for row in rows
         ]
+
+    def replay_after_checkpoint(
+        self,
+        *,
+        venue: str,
+        symbol: str,
+        timeframe: str,
+        max_events: int | None = None,
+    ) -> list[RawMarketEvent]:
+        checkpoint = self.get_checkpoint(venue=venue, symbol=symbol, timeframe=timeframe)
+        query = f"""
+            SELECT venue, symbol, timeframe, event_time_ms, ingest_seq,
+                   source, payload_version, payload_json
+            FROM {self.table_name}
+            WHERE venue = %s AND symbol = %s AND timeframe = %s
+        """
+        params: list[Any] = [venue, symbol, timeframe]
+        if checkpoint is not None:
+            query += """
+                AND (
+                    event_time_ms > %s
+                    OR (event_time_ms = %s AND ingest_seq > %s)
+                )
+            """
+            params.extend(
+                [
+                    int(checkpoint.last_event_time_ms),
+                    int(checkpoint.last_event_time_ms),
+                    int(checkpoint.last_ingest_seq),
+                ]
+            )
+        query += " ORDER BY event_time_ms ASC, ingest_seq ASC"
+        if max_events is not None:
+            query += " LIMIT %s"
+            params.append(int(max_events))
+
+        with self._connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute(query, params)
+                rows = cur.fetchall()
+
+        return [
+            RawMarketEvent(
+                venue=row[0],
+                symbol=row[1],
+                timeframe=row[2],
+                event_time_ms=int(row[3]),
+                ingest_seq=int(row[4]),
+                source=row[5],
+                payload_version=row[6],
+                payload=row[7] if isinstance(row[7], dict) else json.loads(row[7]),
+            )
+            for row in rows
+        ]
+
+    def append_and_advance_checkpoint(
+        self, *, events: Iterable[RawMarketEvent]
+    ) -> tuple[int, ReplayCheckpoint | None]:
+        event_list = list(events)
+        inserted = self.append_events(event_list)
+        if not event_list:
+            return inserted, None
+        venue, symbol, timeframe = _validate_single_stream(event_list)
+        latest = max(event_list, key=lambda ev: (int(ev.event_time_ms), int(ev.ingest_seq)))
+        checkpoint = ReplayCheckpoint(
+            venue=venue,
+            symbol=symbol,
+            timeframe=timeframe,
+            last_event_time_ms=int(latest.event_time_ms),
+            last_ingest_seq=int(latest.ingest_seq),
+        )
+        self.upsert_checkpoint(checkpoint)
+        return inserted, checkpoint
 
     def upsert_checkpoint(self, checkpoint: ReplayCheckpoint) -> None:
         query = f"""
