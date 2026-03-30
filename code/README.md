@@ -26,6 +26,7 @@
 - Adapter helpers to dispatch routed alerts to channel-specific senders.
 - Includes deterministic dispatch accounting (`sent`/`dropped`).
 - Includes concrete webhook/slack sender classes with timeout + retry policy.
+- Includes failure classification (transient vs permanent) and circuit-breaker guard.
 
 ## Tests
 

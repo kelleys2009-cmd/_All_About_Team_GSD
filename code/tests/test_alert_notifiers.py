@@ -1,10 +1,15 @@
 from __future__ import annotations
 
 import unittest
+from urllib.error import HTTPError
 from urllib.error import URLError
 
 from market_data.alert_notifiers import (
+    CircuitBreakerPolicy,
+    NotifierCircuitOpenError,
+    NotifierPermanentError,
     NotifierRetryPolicy,
+    NotifierTransientError,
     SlackWebhookAlertSender,
     WebhookAlertSender,
     build_slack_payload,
@@ -104,7 +109,7 @@ class AlertNotifierTests(unittest.TestCase):
             post_json=always_fail,
             sleep=lambda _seconds: None,
         )
-        with self.assertRaises(URLError):
+        with self.assertRaises(NotifierTransientError):
             sender(
                 RoutedIngestionAlert(
                     alert=IngestionAlert(name="ingestion_checkpoint_lag", severity="critical", message="lag"),
@@ -152,6 +157,73 @@ class AlertNotifierTests(unittest.TestCase):
             seen_payloads,
             [{"text": "[pager] HIGH ingestion_retry_spike: retry high"}],
         )
+
+    def test_dispatch_routed_alerts_drops_on_sender_error(self) -> None:
+        result = dispatch_routed_alerts(
+            [
+                RoutedIngestionAlert(
+                    alert=IngestionAlert(name="ingestion_retry_spike", severity="high", message="retry"),
+                    channel="ops",
+                )
+            ],
+            senders={"ops": lambda _alert: (_ for _ in ()).throw(URLError("down"))},
+        )
+        self.assertEqual(result.sent, 0)
+        self.assertEqual(result.dropped, 1)
+
+    def test_webhook_sender_classifies_4xx_as_permanent(self) -> None:
+        def post_400(_url: str, _payload: dict[str, str], _timeout: float) -> None:
+            raise HTTPError("https://ops.example.test/hook", 400, "bad request", None, None)
+
+        sender = WebhookAlertSender(
+            "https://ops.example.test/hook",
+            retry_policy=NotifierRetryPolicy(max_attempts=3),
+            post_json=post_400,
+            sleep=lambda _seconds: None,
+        )
+        with self.assertRaises(NotifierPermanentError):
+            sender(
+                RoutedIngestionAlert(
+                    alert=IngestionAlert(name="ingestion_checkpoint_lag", severity="critical", message="lag"),
+                    channel="ops",
+                )
+            )
+
+    def test_webhook_sender_opens_circuit_after_threshold(self) -> None:
+        now_value = {"t": 100.0}
+        calls: list[int] = []
+
+        def now() -> float:
+            return now_value["t"]
+
+        def always_fail(_url: str, _payload: dict[str, str], _timeout: float) -> None:
+            calls.append(1)
+            raise URLError("network down")
+
+        sender = WebhookAlertSender(
+            "https://ops.example.test/hook",
+            retry_policy=NotifierRetryPolicy(max_attempts=1),
+            circuit_breaker=CircuitBreakerPolicy(failure_threshold=2, open_seconds=10.0),
+            post_json=always_fail,
+            sleep=lambda _seconds: None,
+            now=now,
+        )
+        alert = RoutedIngestionAlert(
+            alert=IngestionAlert(name="ingestion_retry_spike", severity="high", message="retry"),
+            channel="ops",
+        )
+
+        with self.assertRaises(NotifierTransientError):
+            sender(alert)
+        with self.assertRaises(NotifierTransientError):
+            sender(alert)
+        with self.assertRaises(NotifierCircuitOpenError):
+            sender(alert)
+
+        self.assertEqual(len(calls), 2)
+        now_value["t"] = 111.0
+        with self.assertRaises(NotifierTransientError):
+            sender(alert)
 
 
 if __name__ == "__main__":

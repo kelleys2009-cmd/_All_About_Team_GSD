@@ -8,7 +8,10 @@ from .normalization import (
 )
 from .ingestion_worker import CheckpointedIngestionWorker, IngestionWorkerConfig
 from .alert_notifiers import (
+    CircuitBreakerPolicy,
     NotificationDispatchResult,
+    NotifierCircuitOpenError,
+    NotifierPermanentError,
     NotifierRetryPolicy,
     SlackWebhookAlertSender,
     WebhookAlertSender,
@@ -46,7 +49,10 @@ __all__ = [
     "IngestionWorkerConfig",
     "CheckpointedIngestionWorker",
     "NotificationDispatchResult",
+    "CircuitBreakerPolicy",
     "NotifierRetryPolicy",
+    "NotifierPermanentError",
+    "NotifierCircuitOpenError",
     "WebhookAlertSender",
     "SlackWebhookAlertSender",
     "build_webhook_payload",
