@@ -15,6 +15,7 @@
 `market_data/ingestion_worker.py`
 - Checkpointed ingestion worker loop orchestration for daemon jobs.
 - Includes bounded source pulls and exponential retry backoff.
+- Includes optional structured metric/log hooks for ingest lag and retry observability.
 
 ## Tests
 

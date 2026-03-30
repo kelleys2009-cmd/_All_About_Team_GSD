@@ -13,6 +13,8 @@ class IngestionWorkerTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             store = SqliteRawEventStore(Path(tmp) / "raw_events.db")
             sleeps: list[float] = []
+            metrics: list[tuple[str, float, dict[str, str]]] = []
+            logs: list[tuple[str, dict[str, object]]] = []
 
             source_batches = [
                 [
@@ -48,6 +50,9 @@ class IngestionWorkerTests(unittest.TestCase):
                 config=IngestionWorkerConfig(venue="BINANCE_PERP", symbol="BTC-USD-PERP", timeframe="1m"),
                 fetch_events=fetch_events,
                 sleep_fn=sleeps.append,
+                now_ms_fn=lambda: 2000,
+                metric_fn=lambda name, value, tags: metrics.append((name, value, tags)),
+                log_fn=lambda event, payload: logs.append((event, payload)),
             )
 
             first = worker.run_once()
@@ -61,11 +66,18 @@ class IngestionWorkerTests(unittest.TestCase):
             second = worker.run_once()
             self.assertEqual(second["status"], "idle")
             self.assertEqual(sleeps, [0.25])
+            self.assertIn(("ingestion.events_fetched", 2.0, {"venue": "BINANCE_PERP", "symbol": "BTC-USD-PERP", "timeframe": "1m"}), metrics)
+            self.assertIn(("ingestion.events_inserted", 2.0, {"venue": "BINANCE_PERP", "symbol": "BTC-USD-PERP", "timeframe": "1m"}), metrics)
+            self.assertIn(("ingestion.checkpoint_age_ms", 999.0, {"venue": "BINANCE_PERP", "symbol": "BTC-USD-PERP", "timeframe": "1m"}), metrics)
+            self.assertEqual(logs[0][0], "ingestion.ok")
+            self.assertEqual(logs[1][0], "ingestion.idle")
 
     def test_run_once_retries_with_bounded_backoff(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             store = SqliteRawEventStore(Path(tmp) / "raw_events.db")
             sleeps: list[float] = []
+            metrics: list[tuple[str, float, dict[str, str]]] = []
+            logs: list[tuple[str, dict[str, object]]] = []
 
             def failing_fetch(_checkpoint: ReplayCheckpoint | None, _limit: int) -> list[RawMarketEvent]:
                 raise RuntimeError("temporary feed outage")
@@ -81,6 +93,8 @@ class IngestionWorkerTests(unittest.TestCase):
                 ),
                 fetch_events=failing_fetch,
                 sleep_fn=sleeps.append,
+                metric_fn=lambda name, value, tags: metrics.append((name, value, tags)),
+                log_fn=lambda event, payload: logs.append((event, payload)),
             )
 
             with self.assertRaises(RuntimeError):
@@ -91,6 +105,14 @@ class IngestionWorkerTests(unittest.TestCase):
                 worker.run_once()
 
             self.assertEqual(sleeps, [1.0, 2.0, 2.0])
+            self.assertEqual(
+                [entry[0] for entry in logs],
+                ["ingestion.retry", "ingestion.retry", "ingestion.retry"],
+            )
+            self.assertEqual(
+                [entry[0] for entry in metrics if entry[0] == "ingestion.retries"],
+                ["ingestion.retries", "ingestion.retries", "ingestion.retries"],
+            )
 
 
 if __name__ == "__main__":
