@@ -7,6 +7,7 @@ from .normalization import (
     normalize_ohlcv_payload,
 )
 from .ingestion_worker import CheckpointedIngestionWorker, IngestionWorkerConfig
+from .alert_notifiers import NotificationDispatchResult, dispatch_routed_alerts, format_routed_alert
 from .ingestion_alerts import (
     IngestionAlert,
     IngestionAlertPolicy,
@@ -35,6 +36,9 @@ __all__ = [
     "normalize_ohlcv_payload",
     "IngestionWorkerConfig",
     "CheckpointedIngestionWorker",
+    "NotificationDispatchResult",
+    "dispatch_routed_alerts",
+    "format_routed_alert",
     "IngestionSLOConfig",
     "IngestionObservation",
     "IngestionAlert",

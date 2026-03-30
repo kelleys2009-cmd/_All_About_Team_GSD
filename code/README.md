@@ -22,6 +22,10 @@
 - Produces alert records that can be routed to incident systems.
 - Includes channel policy mapping and de-dup window filtering helpers.
 
+`market_data/alert_notifiers.py`
+- Adapter helpers to dispatch routed alerts to channel-specific senders.
+- Includes deterministic dispatch accounting (`sent`/`dropped`).
+
 ## Tests
 
 ```bash
@@ -29,6 +33,7 @@ cd code
 PYTHONPATH=. python3 -m unittest tests/test_normalization.py tests/test_raw_store.py tests/test_backtesting.py
 PYTHONPATH=. python3 -m unittest tests/test_ingestion_worker.py
 PYTHONPATH=. python3 -m unittest tests/test_ingestion_alerts.py
+PYTHONPATH=. python3 -m unittest tests/test_alert_notifiers.py
 ```
 
 Postgres integration harness (runs only when DSN is provided):
