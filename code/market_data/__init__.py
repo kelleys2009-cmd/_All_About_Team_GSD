@@ -6,6 +6,7 @@ from .normalization import (
     ValidationIssue,
     normalize_ohlcv_payload,
 )
+from .ingestion_worker import CheckpointedIngestionWorker, IngestionWorkerConfig
 from .raw_store import (
     PostgresRawEventStore,
     RawMarketEvent,
@@ -22,6 +23,8 @@ __all__ = [
     "NormalizeResult",
     "ValidationIssue",
     "normalize_ohlcv_payload",
+    "IngestionWorkerConfig",
+    "CheckpointedIngestionWorker",
     "RawMarketEvent",
     "ReplayCheckpoint",
     "SqliteRawEventStore",
