@@ -24,3 +24,11 @@ cd code
 PYTHONPATH=. python3 -m unittest tests/test_normalization.py tests/test_raw_store.py tests/test_backtesting.py
 PYTHONPATH=. python3 -m unittest tests/test_ingestion_worker.py
 ```
+
+Postgres integration harness (runs only when DSN is provided):
+
+```bash
+cd code
+TEAM_GSD_TEST_POSTGRES_DSN='postgresql://user:pass@localhost:5432/dbname' \
+PYTHONPATH=. python3 -m unittest tests.integration.test_postgres_raw_store_integration
+```
