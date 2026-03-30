@@ -6,7 +6,14 @@ from .normalization import (
     ValidationIssue,
     normalize_ohlcv_payload,
 )
-from .raw_store import RawMarketEvent, SqliteRawEventStore, timescaledb_schema_sql
+from .raw_store import (
+    PostgresRawEventStore,
+    RawMarketEvent,
+    ReplayCheckpoint,
+    SqliteRawEventStore,
+    timescaledb_checkpoint_schema_sql,
+    timescaledb_schema_sql,
+)
 
 __all__ = [
     "CanonicalBar",
@@ -16,6 +23,9 @@ __all__ = [
     "ValidationIssue",
     "normalize_ohlcv_payload",
     "RawMarketEvent",
+    "ReplayCheckpoint",
     "SqliteRawEventStore",
+    "PostgresRawEventStore",
     "timescaledb_schema_sql",
+    "timescaledb_checkpoint_schema_sql",
 ]

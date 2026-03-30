@@ -7,7 +7,8 @@
 
 `market_data/raw_store.py`
 - Raw event persistence and deterministic replay primitives.
-- Includes local SQLite writer and TimescaleDB DDL contract helper.
+- Includes local SQLite writer, Postgres/Timescale runtime writer, and schema helpers.
+- Includes replay checkpoint persistence for long-running ingestion jobs.
 
 ## Tests
 

@@ -4,7 +4,13 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from market_data.raw_store import RawMarketEvent, SqliteRawEventStore, timescaledb_schema_sql
+from market_data.raw_store import (
+    RawMarketEvent,
+    ReplayCheckpoint,
+    SqliteRawEventStore,
+    timescaledb_checkpoint_schema_sql,
+    timescaledb_schema_sql,
+)
 
 
 class RawStoreTests(unittest.TestCase):
@@ -70,6 +76,42 @@ class RawStoreTests(unittest.TestCase):
         ddl = timescaledb_schema_sql()
         self.assertIn("payload_json JSONB NOT NULL", ddl)
         self.assertIn("PRIMARY KEY", ddl)
+
+    def test_checkpoint_upsert_and_read(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            store = SqliteRawEventStore(Path(tmp) / "raw_events.db")
+            checkpoint = ReplayCheckpoint(
+                venue="BINANCE_PERP",
+                symbol="BTC-USD-PERP",
+                timeframe="1m",
+                last_event_time_ms=5000,
+                last_ingest_seq=7,
+            )
+            store.upsert_checkpoint(checkpoint)
+
+            loaded = store.get_checkpoint(venue="BINANCE_PERP", symbol="BTC-USD-PERP", timeframe="1m")
+            assert loaded is not None
+            self.assertEqual(loaded.last_event_time_ms, 5000)
+            self.assertEqual(loaded.last_ingest_seq, 7)
+
+            store.upsert_checkpoint(
+                ReplayCheckpoint(
+                    venue="BINANCE_PERP",
+                    symbol="BTC-USD-PERP",
+                    timeframe="1m",
+                    last_event_time_ms=6000,
+                    last_ingest_seq=1,
+                )
+            )
+            updated = store.get_checkpoint(venue="BINANCE_PERP", symbol="BTC-USD-PERP", timeframe="1m")
+            assert updated is not None
+            self.assertEqual(updated.last_event_time_ms, 6000)
+            self.assertEqual(updated.last_ingest_seq, 1)
+
+    def test_timescale_checkpoint_schema_contains_primary_key(self) -> None:
+        ddl = timescaledb_checkpoint_schema_sql()
+        self.assertIn("market_data_replay_checkpoints", ddl)
+        self.assertIn("PRIMARY KEY (venue, symbol, timeframe)", ddl)
 
 
 if __name__ == "__main__":
