@@ -7,6 +7,7 @@ from .normalization import (
     normalize_ohlcv_payload,
 )
 from .ingestion_worker import CheckpointedIngestionWorker, IngestionWorkerConfig
+from .ingestion_alerts import IngestionAlert, IngestionObservation, IngestionSLOConfig, evaluate_ingestion_slo
 from .raw_store import (
     PostgresRawEventStore,
     RawMarketEvent,
@@ -25,6 +26,10 @@ __all__ = [
     "normalize_ohlcv_payload",
     "IngestionWorkerConfig",
     "CheckpointedIngestionWorker",
+    "IngestionSLOConfig",
+    "IngestionObservation",
+    "IngestionAlert",
+    "evaluate_ingestion_slo",
     "RawMarketEvent",
     "ReplayCheckpoint",
     "SqliteRawEventStore",

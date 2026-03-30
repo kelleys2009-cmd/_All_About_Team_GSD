@@ -17,12 +17,17 @@
 - Includes bounded source pulls and exponential retry backoff.
 - Includes optional structured metric/log hooks for ingest lag and retry observability.
 
+`market_data/ingestion_alerts.py`
+- SLO threshold evaluator for ingestion lag/retry/idle signals.
+- Produces alert records that can be routed to incident systems.
+
 ## Tests
 
 ```bash
 cd code
 PYTHONPATH=. python3 -m unittest tests/test_normalization.py tests/test_raw_store.py tests/test_backtesting.py
 PYTHONPATH=. python3 -m unittest tests/test_ingestion_worker.py
+PYTHONPATH=. python3 -m unittest tests/test_ingestion_alerts.py
 ```
 
 Postgres integration harness (runs only when DSN is provided):
