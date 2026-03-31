@@ -58,6 +58,40 @@ class NotifierSLOStateStoreTests(unittest.TestCase):
         self.assertIsInstance(store, RedisNotifierSLOStateStore)
         self.assertEqual(seen_urls, ["redis://cache:6379/2"])
 
+    def test_factory_passes_redis_auth_tls_options(self) -> None:
+        seen: list[tuple[str, dict[str, object]]] = []
+
+        def redis_factory(url: str, **kwargs: object) -> object:
+            seen.append((url, dict(kwargs)))
+            return _FakeRedis()
+
+        store = create_notifier_slo_state_store_from_env(
+            env={
+                "TEAM_GSD_NOTIFIER_SLO_STATE_BACKEND": "redis",
+                "TEAM_GSD_NOTIFIER_SLO_REDIS_URL": "rediss://secure-cache:6380/0",
+                "TEAM_GSD_NOTIFIER_SLO_REDIS_USERNAME": "teamgsd",
+                "TEAM_GSD_NOTIFIER_SLO_REDIS_PASSWORD": "secret",
+                "TEAM_GSD_NOTIFIER_SLO_REDIS_SSL": "true",
+                "TEAM_GSD_NOTIFIER_SLO_REDIS_SSL_CA_CERT": "/etc/ssl/ca.pem",
+            },
+            redis_client_factory=redis_factory,
+        )
+        self.assertIsInstance(store, RedisNotifierSLOStateStore)
+        self.assertEqual(
+            seen,
+            [
+                (
+                    "rediss://secure-cache:6380/0",
+                    {
+                        "username": "teamgsd",
+                        "password": "secret",
+                        "ssl": True,
+                        "ssl_ca_certs": "/etc/ssl/ca.pem",
+                    },
+                )
+            ],
+        )
+
     def test_factory_redis_requires_factory(self) -> None:
         with self.assertRaises(ValueError):
             create_notifier_slo_state_store_from_env(

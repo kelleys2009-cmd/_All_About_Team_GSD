@@ -105,8 +105,11 @@ def dedupe_notifier_slo_alerts_with_store(
 def create_notifier_slo_state_store_from_env(
     *,
     env: dict[str, str] | None = None,
-    redis_client_factory: Callable[[str], object] | None = None,
+    redis_client_factory: Callable[..., object] | None = None,
 ) -> SqliteNotifierSLOStateStore | RedisNotifierSLOStateStore:
+    def _parse_bool(value: str | None) -> bool:
+        return str(value or "").strip().lower() in {"1", "true", "yes", "on"}
+
     source = os.environ if env is None else env
     backend = source.get("TEAM_GSD_NOTIFIER_SLO_STATE_BACKEND", "sqlite").strip().lower()
     if backend == "redis":
@@ -114,7 +117,26 @@ def create_notifier_slo_state_store_from_env(
         redis_key = source.get("TEAM_GSD_NOTIFIER_SLO_REDIS_KEY", "teamgsd:notifier_slo_state")
         if redis_client_factory is None:
             raise ValueError("redis_client_factory is required when backend=redis")
-        return RedisNotifierSLOStateStore(redis_client_factory(redis_url), key=redis_key)
+        redis_kwargs: dict[str, object] = {}
+        redis_username = source.get("TEAM_GSD_NOTIFIER_SLO_REDIS_USERNAME")
+        redis_password = source.get("TEAM_GSD_NOTIFIER_SLO_REDIS_PASSWORD")
+        redis_ssl = _parse_bool(source.get("TEAM_GSD_NOTIFIER_SLO_REDIS_SSL"))
+        redis_ssl_ca = source.get("TEAM_GSD_NOTIFIER_SLO_REDIS_SSL_CA_CERT")
+        if redis_username:
+            redis_kwargs["username"] = redis_username
+        if redis_password:
+            redis_kwargs["password"] = redis_password
+        if redis_ssl:
+            redis_kwargs["ssl"] = True
+        if redis_ssl_ca:
+            redis_kwargs["ssl_ca_certs"] = redis_ssl_ca
+
+        try:
+            redis_client = redis_client_factory(redis_url, **redis_kwargs)
+        except TypeError:
+            # Backward compatibility for factories that only accept the URL.
+            redis_client = redis_client_factory(redis_url)
+        return RedisNotifierSLOStateStore(redis_client, key=redis_key)
 
     sqlite_path = source.get("TEAM_GSD_NOTIFIER_SLO_SQLITE_PATH", "artifacts/notifier_slo_state.db")
     return SqliteNotifierSLOStateStore(sqlite_path)
