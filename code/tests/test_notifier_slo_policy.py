@@ -4,7 +4,9 @@ import unittest
 
 from market_data.notifier_slo_policy import (
     NotifierMetricPoint,
+    NotifierSLOCooldownPolicy,
     NotifierSLOPolicy,
+    dedupe_notifier_slo_alerts,
     default_notifier_slo_policies,
     evaluate_notifier_slo_policies,
 )
@@ -63,6 +65,31 @@ class NotifierSLOPolicyTests(unittest.TestCase):
             now_ms=3000,
         )
         self.assertEqual([alert.name for alert in alerts], ["notifier_delivery_drop"])
+
+    def test_dedupe_notifier_slo_alerts_with_cooldown(self) -> None:
+        alerts = evaluate_notifier_slo_policies(
+            metrics=[
+                ("notifier.alert_dropped", 1.0, {"venue": "BINANCE_PERP", "symbol": "BTC-USD-PERP", "timeframe": "1m"})
+            ]
+        )
+        filtered_1, state = dedupe_notifier_slo_alerts(alerts, now_ms=10_000)
+        self.assertEqual(len(filtered_1), 1)
+
+        filtered_2, state = dedupe_notifier_slo_alerts(
+            alerts,
+            now_ms=20_000,
+            last_sent_ms=state,
+            cooldown_policy_by_alert={"notifier_delivery_drop": NotifierSLOCooldownPolicy(cooldown_ms=15_000)},
+        )
+        self.assertEqual(filtered_2, [])
+
+        filtered_3, _state = dedupe_notifier_slo_alerts(
+            alerts,
+            now_ms=26_000,
+            last_sent_ms=state,
+            cooldown_policy_by_alert={"notifier_delivery_drop": NotifierSLOCooldownPolicy(cooldown_ms=15_000)},
+        )
+        self.assertEqual(len(filtered_3), 1)
 
 
 if __name__ == "__main__":

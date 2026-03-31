@@ -35,7 +35,9 @@ from .ingestion_alerts import (
 )
 from .notifier_slo_policy import (
     NotifierMetricPoint,
+    NotifierSLOCooldownPolicy,
     NotifierSLOPolicy,
+    dedupe_notifier_slo_alerts,
     default_notifier_slo_policies,
     evaluate_notifier_slo_policies,
 )
@@ -80,9 +82,11 @@ __all__ = [
     "route_ingestion_alerts",
     "dedupe_ingestion_alerts",
     "NotifierMetricPoint",
+    "NotifierSLOCooldownPolicy",
     "NotifierSLOPolicy",
     "default_notifier_slo_policies",
     "evaluate_notifier_slo_policies",
+    "dedupe_notifier_slo_alerts",
     "RawMarketEvent",
     "ReplayCheckpoint",
     "SqliteRawEventStore",

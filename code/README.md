@@ -35,6 +35,7 @@
 - Maps notifier metric streams into actionable SLO alert records.
 - Includes default policy bindings for drop and circuit-open events.
 - Includes optional rolling-window evaluation via timestamped metric points.
+- Includes cooldown/dedup helpers to suppress repeated SLO alert spam.
 
 ## Tests
 

@@ -22,6 +22,11 @@ class NotifierMetricPoint:
     tags: dict[str, str]
 
 
+@dataclass(frozen=True)
+class NotifierSLOCooldownPolicy:
+    cooldown_ms: int = 300_000
+
+
 def default_notifier_slo_policies() -> list[NotifierSLOPolicy]:
     return [
         NotifierSLOPolicy(
@@ -79,3 +84,23 @@ def evaluate_notifier_slo_policies(
             )
         )
     return alerts
+
+
+def dedupe_notifier_slo_alerts(
+    alerts: list[IngestionAlert],
+    *,
+    now_ms: int,
+    cooldown_policy_by_alert: dict[str, NotifierSLOCooldownPolicy] | None = None,
+    last_sent_ms: dict[str, int] | None = None,
+) -> tuple[list[IngestionAlert], dict[str, int]]:
+    policies = {} if cooldown_policy_by_alert is None else dict(cooldown_policy_by_alert)
+    state = {} if last_sent_ms is None else dict(last_sent_ms)
+    filtered: list[IngestionAlert] = []
+    for alert in alerts:
+        policy = policies.get(alert.name, NotifierSLOCooldownPolicy())
+        previous = state.get(alert.name)
+        if previous is not None and now_ms - previous < policy.cooldown_ms:
+            continue
+        state[alert.name] = now_ms
+        filtered.append(alert)
+    return filtered, state
