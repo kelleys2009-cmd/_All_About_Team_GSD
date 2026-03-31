@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import sqlite3
+import uuid
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable
@@ -179,15 +180,27 @@ def dedupe_notifier_slo_alerts_with_store(
 
 def probe_notifier_slo_state_store_connectivity(
     store: SqliteNotifierSLOStateStore | RedisNotifierSLOStateStore,
+    *,
+    write_check: bool = False,
 ) -> NotifierSLOStateStoreProbeResult:
     try:
         if isinstance(store, SqliteNotifierSLOStateStore):
             with store._connect() as conn:
                 conn.execute("SELECT 1").fetchone()
+                if write_check:
+                    conn.execute(
+                        "CREATE TABLE IF NOT EXISTS notifier_slo_probe (id TEXT PRIMARY KEY, created_at INTEGER NOT NULL)"
+                    )
+                    probe_id = uuid.uuid4().hex
+                    conn.execute(
+                        "INSERT INTO notifier_slo_probe (id, created_at) VALUES (?, ?)",
+                        (probe_id, 1),
+                    )
+                    conn.execute("DELETE FROM notifier_slo_probe WHERE id = ?", (probe_id,))
             return NotifierSLOStateStoreProbeResult(
                 backend="sqlite",
                 ok=True,
-                detail="sqlite connectivity OK",
+                detail="sqlite connectivity OK" if not write_check else "sqlite read/write probe OK",
             )
 
         ping = getattr(store._redis, "ping", None)
@@ -195,10 +208,22 @@ def probe_notifier_slo_state_store_connectivity(
             ping()
         else:
             store.load_state()
+        if write_check:
+            set_fn = getattr(store._redis, "set", None)
+            get_fn = getattr(store._redis, "get", None)
+            del_fn = getattr(store._redis, "delete", None)
+            if not (callable(set_fn) and callable(get_fn) and callable(del_fn)):
+                raise RuntimeError("redis client missing set/get/delete for write_check")
+            probe_key = f"{store._key}:probe:{uuid.uuid4().hex}"
+            set_fn(probe_key, "1")
+            got = get_fn(probe_key)
+            del_fn(probe_key)
+            if str(got) not in {"1", "b'1'"}:
+                raise RuntimeError("redis write_check value mismatch")
         return NotifierSLOStateStoreProbeResult(
             backend="redis",
             ok=True,
-            detail="redis connectivity OK",
+            detail="redis connectivity OK" if not write_check else "redis read/write probe OK",
         )
     except Exception as exc:
         backend = "redis" if isinstance(store, RedisNotifierSLOStateStore) else "sqlite"

@@ -48,6 +48,7 @@
 - Includes env redaction helper to prevent secret leakage in diagnostics.
 - Includes a debug snapshot builder combining backend/validation/redacted env payloads.
 - Includes runtime connectivity probe helper for SQLite/Redis backend diagnostics.
+- Probe helper supports optional write-path checks (`write_check=True`).
 
 ## Tests
 

@@ -23,6 +23,7 @@ from market_data.notifier_slo_state_store import (
 class _FakeRedis:
     def __init__(self) -> None:
         self._data: dict[str, dict[str, int]] = {}
+        self._kv: dict[str, str] = {}
 
     def hget(self, key: str, field: str) -> str | None:
         bucket = self._data.get(key, {})
@@ -41,6 +42,15 @@ class _FakeRedis:
     def ping(self) -> bool:
         return True
 
+    def set(self, key: str, value: str) -> None:
+        self._kv[key] = str(value)
+
+    def get(self, key: str) -> str | None:
+        return self._kv.get(key)
+
+    def delete(self, key: str) -> None:
+        self._kv.pop(key, None)
+
 
 class NotifierSLOStateStoreTests(unittest.TestCase):
     def test_probe_connectivity_sqlite_and_redis(self) -> None:
@@ -55,6 +65,20 @@ class NotifierSLOStateStoreTests(unittest.TestCase):
         redis_probe = probe_notifier_slo_state_store_connectivity(redis_store)
         self.assertTrue(redis_probe.ok)
         self.assertEqual(redis_probe.backend, "redis")
+        redis_write_probe = probe_notifier_slo_state_store_connectivity(redis_store, write_check=True)
+        self.assertTrue(redis_write_probe.ok)
+        self.assertIn("read/write", redis_write_probe.detail)
+
+    def test_probe_connectivity_redis_write_check_missing_methods(self) -> None:
+        class _ReadOnlyRedis(_FakeRedis):
+            set = None  # type: ignore
+            get = None  # type: ignore
+            delete = None  # type: ignore
+
+        redis_store = RedisNotifierSLOStateStore(_ReadOnlyRedis(), key="test:notifier")
+        probe = probe_notifier_slo_state_store_connectivity(redis_store, write_check=True)
+        self.assertFalse(probe.ok)
+        self.assertIn("RuntimeError", probe.detail)
 
     def test_probe_connectivity_redis_failure(self) -> None:
         class _BrokenRedis(_FakeRedis):
