@@ -7,6 +7,8 @@ from urllib.error import URLError
 from market_data.alert_notifiers import (
     CircuitBreakerPolicy,
     NotifierCircuitOpenError,
+    NotifierMetricContractError,
+    NotifierMetricSchema,
     NotifierPermanentError,
     NotifierRetryPolicy,
     NotifierTransientError,
@@ -16,6 +18,7 @@ from market_data.alert_notifiers import (
     build_webhook_payload,
     dispatch_routed_alerts,
     format_routed_alert,
+    validate_notifier_metric_tags,
 )
 from market_data.ingestion_alerts import IngestionAlert, RoutedIngestionAlert
 
@@ -169,16 +172,26 @@ class AlertNotifierTests(unittest.TestCase):
             ],
             senders={"ops": lambda _alert: (_ for _ in ()).throw(URLError("down"))},
             metric_fn=lambda name, value, tags: metrics.append((name, value, tags)),
-            metric_tags={"venue": "BINANCE_PERP"},
+            metric_tags={"venue": "BINANCE_PERP", "symbol": "BTC-USD-PERP", "timeframe": "1m"},
         )
         self.assertEqual(result.sent, 0)
         self.assertEqual(result.dropped, 1)
         self.assertIn(
-            ("notifier.alert_dropped", 1.0, {"venue": "BINANCE_PERP", "channel": "ops", "reason": "sender_error"}),
+            (
+                "notifier.alert_dropped",
+                1.0,
+                {
+                    "venue": "BINANCE_PERP",
+                    "symbol": "BTC-USD-PERP",
+                    "timeframe": "1m",
+                    "channel": "ops",
+                    "reason": "sender_error",
+                },
+            ),
             metrics,
         )
         self.assertIn(
-            ("notifier.batch_dropped", 1.0, {"venue": "BINANCE_PERP"}),
+            ("notifier.batch_dropped", 1.0, {"venue": "BINANCE_PERP", "symbol": "BTC-USD-PERP", "timeframe": "1m"}),
             metrics,
         )
 
@@ -220,7 +233,7 @@ class AlertNotifierTests(unittest.TestCase):
             sleep=lambda _seconds: None,
             now=now,
             metric_fn=lambda name, value, tags: metrics.append((name, value, tags)),
-            metric_tags={"venue": "KRAKEN"},
+            metric_tags={"venue": "KRAKEN", "symbol": "ETH-USD", "timeframe": "1m"},
         )
         alert = RoutedIngestionAlert(
             alert=IngestionAlert(name="ingestion_retry_spike", severity="high", message="retry"),
@@ -235,14 +248,34 @@ class AlertNotifierTests(unittest.TestCase):
             sender(alert)
 
         self.assertEqual(len(calls), 2)
-        self.assertIn(("notifier.circuit_open", 1.0, {"venue": "KRAKEN"}), metrics)
+        self.assertIn(("notifier.circuit_open", 1.0, {"venue": "KRAKEN", "symbol": "ETH-USD", "timeframe": "1m"}), metrics)
         self.assertIn(
-            ("notifier.circuit_open_drop", 1.0, {"venue": "KRAKEN", "channel": "ops"}),
+            (
+                "notifier.circuit_open_drop",
+                1.0,
+                {"venue": "KRAKEN", "symbol": "ETH-USD", "timeframe": "1m", "channel": "ops"},
+            ),
             metrics,
         )
         now_value["t"] = 111.0
         with self.assertRaises(NotifierTransientError):
             sender(alert)
+
+    def test_validate_notifier_metric_tags_requires_base_tags_and_reason_enum(self) -> None:
+        schema = NotifierMetricSchema()
+        with self.assertRaises(NotifierMetricContractError):
+            validate_notifier_metric_tags("notifier.alert_sent", {"venue": "BINANCE_PERP"}, schema)
+        with self.assertRaises(NotifierMetricContractError):
+            validate_notifier_metric_tags(
+                "notifier.alert_dropped",
+                {"venue": "BINANCE_PERP", "symbol": "BTC-USD-PERP", "timeframe": "1m", "reason": "oops"},
+                schema,
+            )
+        validate_notifier_metric_tags(
+            "notifier.alert_dropped",
+            {"venue": "BINANCE_PERP", "symbol": "BTC-USD-PERP", "timeframe": "1m", "reason": "sender_error"},
+            schema,
+        )
 
 
 if __name__ == "__main__":

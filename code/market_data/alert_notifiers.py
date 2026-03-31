@@ -29,6 +29,17 @@ class CircuitBreakerPolicy:
     open_seconds: float = 30.0
 
 
+@dataclass(frozen=True)
+class NotifierMetricSchema:
+    required_base_tags: tuple[str, ...] = ("venue", "symbol", "timeframe")
+    allowed_reason_tags: tuple[str, ...] = (
+        "missing_sender",
+        "sender_error",
+        "permanent",
+        "transient",
+    )
+
+
 class NotifierPermanentError(Exception):
     pass
 
@@ -38,6 +49,10 @@ class NotifierTransientError(Exception):
 
 
 class NotifierCircuitOpenError(Exception):
+    pass
+
+
+class NotifierMetricContractError(Exception):
     pass
 
 
@@ -76,6 +91,25 @@ def _classify_notifier_error(error: Exception) -> Exception:
     return error
 
 
+def validate_notifier_metric_tags(
+    metric_name: str,
+    tags: dict[str, str],
+    schema: NotifierMetricSchema,
+) -> None:
+    if not metric_name.startswith("notifier."):
+        return
+    missing_tags = [key for key in schema.required_base_tags if key not in tags]
+    if missing_tags:
+        raise NotifierMetricContractError(
+            f"{metric_name} missing required tags: {', '.join(missing_tags)}"
+        )
+    reason = tags.get("reason")
+    if reason is not None and reason not in schema.allowed_reason_tags:
+        raise NotifierMetricContractError(
+            f"{metric_name} invalid reason '{reason}'"
+        )
+
+
 class WebhookAlertSender:
     def __init__(
         self,
@@ -89,6 +123,7 @@ class WebhookAlertSender:
         now: Callable[[], float] = time.time,
         metric_fn: Callable[[str, float, dict[str, str]], None] | None = None,
         metric_tags: dict[str, str] | None = None,
+        metric_schema: NotifierMetricSchema | None = None,
     ) -> None:
         self._webhook_url = webhook_url
         self._retry_policy = retry_policy or NotifierRetryPolicy()
@@ -101,12 +136,17 @@ class WebhookAlertSender:
         self._circuit_open_until = 0.0
         self._metric_fn = metric_fn
         self._metric_tags = {} if metric_tags is None else dict(metric_tags)
+        self._metric_schema = metric_schema or NotifierMetricSchema()
 
     def _emit_metric(self, name: str, value: float, **extra_tags: str) -> None:
         if self._metric_fn is None:
             return
         tags = dict(self._metric_tags)
         tags.update(extra_tags)
+        try:
+            validate_notifier_metric_tags(name, tags, self._metric_schema)
+        except NotifierMetricContractError:
+            return
         self._metric_fn(name, value, tags)
 
     def __call__(self, alert: RoutedIngestionAlert) -> None:
@@ -158,6 +198,7 @@ class SlackWebhookAlertSender(WebhookAlertSender):
         now: Callable[[], float] = time.time,
         metric_fn: Callable[[str, float, dict[str, str]], None] | None = None,
         metric_tags: dict[str, str] | None = None,
+        metric_schema: NotifierMetricSchema | None = None,
     ) -> None:
         super().__init__(
             webhook_url,
@@ -169,6 +210,7 @@ class SlackWebhookAlertSender(WebhookAlertSender):
             now=now,
             metric_fn=metric_fn,
             metric_tags=metric_tags,
+            metric_schema=metric_schema,
         )
 
 
@@ -182,14 +224,20 @@ def dispatch_routed_alerts(
     senders: dict[str, Callable[[RoutedIngestionAlert], None]],
     metric_fn: Callable[[str, float, dict[str, str]], None] | None = None,
     metric_tags: dict[str, str] | None = None,
+    metric_schema: NotifierMetricSchema | None = None,
 ) -> NotificationDispatchResult:
     base_tags = {} if metric_tags is None else dict(metric_tags)
+    schema = metric_schema or NotifierMetricSchema()
 
     def emit_metric(name: str, value: float, **extra_tags: str) -> None:
         if metric_fn is None:
             return
         tags = dict(base_tags)
         tags.update(extra_tags)
+        try:
+            validate_notifier_metric_tags(name, tags, schema)
+        except NotifierMetricContractError:
+            return
         metric_fn(name, value, tags)
 
     sent = 0
