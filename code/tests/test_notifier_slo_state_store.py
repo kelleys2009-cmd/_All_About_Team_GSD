@@ -7,12 +7,14 @@ from pathlib import Path
 from market_data.ingestion_alerts import IngestionAlert
 from market_data.notifier_slo_policy import NotifierSLOCooldownPolicy
 from market_data.notifier_slo_state_store import (
+    NotifierSLOStateStoreProbeResult,
     NotifierSLOStateEnvDebugSnapshot,
     RedisNotifierSLOStateStore,
     SqliteNotifierSLOStateStore,
     build_notifier_slo_state_env_debug_snapshot,
     create_notifier_slo_state_store_from_env,
     dedupe_notifier_slo_alerts_with_store,
+    probe_notifier_slo_state_store_connectivity,
     redact_notifier_slo_state_env,
     validate_notifier_slo_state_env,
 )
@@ -36,8 +38,34 @@ class _FakeRedis:
         for field, value in mapping.items():
             bucket[field] = int(value)
 
+    def ping(self) -> bool:
+        return True
+
 
 class NotifierSLOStateStoreTests(unittest.TestCase):
+    def test_probe_connectivity_sqlite_and_redis(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            sqlite_store = SqliteNotifierSLOStateStore(Path(tmp) / "notifier_slo_state.db")
+            sqlite_probe = probe_notifier_slo_state_store_connectivity(sqlite_store)
+            self.assertIsInstance(sqlite_probe, NotifierSLOStateStoreProbeResult)
+            self.assertTrue(sqlite_probe.ok)
+            self.assertEqual(sqlite_probe.backend, "sqlite")
+
+        redis_store = RedisNotifierSLOStateStore(_FakeRedis(), key="test:notifier")
+        redis_probe = probe_notifier_slo_state_store_connectivity(redis_store)
+        self.assertTrue(redis_probe.ok)
+        self.assertEqual(redis_probe.backend, "redis")
+
+    def test_probe_connectivity_redis_failure(self) -> None:
+        class _BrokenRedis(_FakeRedis):
+            def ping(self) -> bool:
+                raise RuntimeError("unreachable")
+
+        redis_store = RedisNotifierSLOStateStore(_BrokenRedis(), key="test:notifier")
+        probe = probe_notifier_slo_state_store_connectivity(redis_store)
+        self.assertFalse(probe.ok)
+        self.assertIn("RuntimeError", probe.detail)
+
     def test_build_debug_snapshot_combines_validation_and_redaction(self) -> None:
         snapshot = build_notifier_slo_state_env_debug_snapshot(
             {

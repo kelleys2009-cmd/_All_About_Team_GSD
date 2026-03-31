@@ -18,6 +18,13 @@ class NotifierSLOStateEnvDebugSnapshot:
     redacted_env: dict[str, str]
 
 
+@dataclass(frozen=True)
+class NotifierSLOStateStoreProbeResult:
+    backend: str
+    ok: bool
+    detail: str
+
+
 def validate_notifier_slo_state_env(
     env: dict[str, str],
 ) -> list[str]:
@@ -168,6 +175,38 @@ def dedupe_notifier_slo_alerts_with_store(
     )
     store.save_state(new_state)
     return filtered
+
+
+def probe_notifier_slo_state_store_connectivity(
+    store: SqliteNotifierSLOStateStore | RedisNotifierSLOStateStore,
+) -> NotifierSLOStateStoreProbeResult:
+    try:
+        if isinstance(store, SqliteNotifierSLOStateStore):
+            with store._connect() as conn:
+                conn.execute("SELECT 1").fetchone()
+            return NotifierSLOStateStoreProbeResult(
+                backend="sqlite",
+                ok=True,
+                detail="sqlite connectivity OK",
+            )
+
+        ping = getattr(store._redis, "ping", None)
+        if callable(ping):
+            ping()
+        else:
+            store.load_state()
+        return NotifierSLOStateStoreProbeResult(
+            backend="redis",
+            ok=True,
+            detail="redis connectivity OK",
+        )
+    except Exception as exc:
+        backend = "redis" if isinstance(store, RedisNotifierSLOStateStore) else "sqlite"
+        return NotifierSLOStateStoreProbeResult(
+            backend=backend,
+            ok=False,
+            detail=f"{backend} connectivity probe failed: {exc.__class__.__name__}",
+        )
 
 
 def create_notifier_slo_state_store_from_env(
