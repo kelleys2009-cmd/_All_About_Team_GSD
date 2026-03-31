@@ -55,6 +55,22 @@ class CheckpointedIngestionWorker:
         tags.update(extra_tags)
         self.metric_fn(name, value, tags)
 
+    def notifier_metric_tags(self, **extra_tags: str) -> dict[str, str]:
+        tags = self._tags()
+        tags["component"] = "notifier"
+        tags.update(extra_tags)
+        return tags
+
+    def notifier_metric_fn(self) -> Callable[[str, float, dict[str, str]], None]:
+        def emit(name: str, value: float, tags: dict[str, str]) -> None:
+            if self.metric_fn is None:
+                return
+            merged_tags = self._tags()
+            merged_tags.update(tags)
+            self.metric_fn(name, value, merged_tags)
+
+        return emit
+
     def _log(self, event: str, **fields: object) -> None:
         if self.log_fn is None:
             return

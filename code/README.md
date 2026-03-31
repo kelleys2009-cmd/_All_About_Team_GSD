@@ -16,6 +16,7 @@
 - Checkpointed ingestion worker loop orchestration for daemon jobs.
 - Includes bounded source pulls and exponential retry backoff.
 - Includes optional structured metric/log hooks for ingest lag and retry observability.
+- Includes notifier metric adapters so alert sender metrics inherit worker tags.
 
 `market_data/ingestion_alerts.py`
 - SLO threshold evaluator for ingestion lag/retry/idle signals.

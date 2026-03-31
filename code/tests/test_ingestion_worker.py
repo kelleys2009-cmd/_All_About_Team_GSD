@@ -9,6 +9,47 @@ from market_data.raw_store import RawMarketEvent, ReplayCheckpoint, SqliteRawEve
 
 
 class IngestionWorkerTests(unittest.TestCase):
+    def test_notifier_metric_adapter_reuses_worker_tags(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            store = SqliteRawEventStore(Path(tmp) / "raw_events.db")
+            metrics: list[tuple[str, float, dict[str, str]]] = []
+
+            worker = CheckpointedIngestionWorker(
+                store=store,
+                config=IngestionWorkerConfig(venue="BINANCE_PERP", symbol="BTC-USD-PERP", timeframe="1m"),
+                fetch_events=lambda _checkpoint, _limit: [],
+                metric_fn=lambda name, value, tags: metrics.append((name, value, tags)),
+            )
+
+            notifier_metric_fn = worker.notifier_metric_fn()
+            notifier_metric_fn("notifier.alert_sent", 1.0, {"channel": "ops"})
+
+            self.assertEqual(
+                metrics,
+                [
+                    (
+                        "notifier.alert_sent",
+                        1.0,
+                        {
+                            "venue": "BINANCE_PERP",
+                            "symbol": "BTC-USD-PERP",
+                            "timeframe": "1m",
+                            "channel": "ops",
+                        },
+                    )
+                ],
+            )
+            self.assertEqual(
+                worker.notifier_metric_tags(channel="pager"),
+                {
+                    "venue": "BINANCE_PERP",
+                    "symbol": "BTC-USD-PERP",
+                    "timeframe": "1m",
+                    "component": "notifier",
+                    "channel": "pager",
+                },
+            )
+
     def test_run_once_persists_and_advances_checkpoint(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             store = SqliteRawEventStore(Path(tmp) / "raw_events.db")
