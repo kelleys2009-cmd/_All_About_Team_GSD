@@ -87,6 +87,8 @@ class WebhookAlertSender:
         post_json: Callable[[str, dict[str, Any], float], None] = _post_json_urllib,
         sleep: Callable[[float], None] = time.sleep,
         now: Callable[[], float] = time.time,
+        metric_fn: Callable[[str, float, dict[str, str]], None] | None = None,
+        metric_tags: dict[str, str] | None = None,
     ) -> None:
         self._webhook_url = webhook_url
         self._retry_policy = retry_policy or NotifierRetryPolicy()
@@ -97,9 +99,19 @@ class WebhookAlertSender:
         self._now = now
         self._consecutive_failures = 0
         self._circuit_open_until = 0.0
+        self._metric_fn = metric_fn
+        self._metric_tags = {} if metric_tags is None else dict(metric_tags)
+
+    def _emit_metric(self, name: str, value: float, **extra_tags: str) -> None:
+        if self._metric_fn is None:
+            return
+        tags = dict(self._metric_tags)
+        tags.update(extra_tags)
+        self._metric_fn(name, value, tags)
 
     def __call__(self, alert: RoutedIngestionAlert) -> None:
         if self._now() < self._circuit_open_until:
+            self._emit_metric("notifier.circuit_open_drop", 1.0, channel=alert.channel)
             raise NotifierCircuitOpenError(
                 f"circuit open until {self._circuit_open_until:.3f}"
             )
@@ -112,13 +124,16 @@ class WebhookAlertSender:
                     self._retry_policy.timeout_seconds,
                 )
                 self._consecutive_failures = 0
+                self._emit_metric("notifier.sent", 1.0, channel=alert.channel)
                 return
             except (HTTPError, URLError, TimeoutError) as raw_error:
                 classified = _classify_notifier_error(raw_error)
                 if isinstance(classified, NotifierPermanentError):
+                    self._emit_metric("notifier.failure", 1.0, channel=alert.channel, reason="permanent")
                     self._trip_circuit()
                     raise classified
                 if attempt >= self._retry_policy.max_attempts:
+                    self._emit_metric("notifier.failure", 1.0, channel=alert.channel, reason="transient")
                     self._trip_circuit()
                     raise classified
                 backoff = self._retry_policy.backoff_seconds * (2 ** (attempt - 1))
@@ -128,6 +143,7 @@ class WebhookAlertSender:
         self._consecutive_failures += 1
         if self._consecutive_failures >= self._circuit_breaker.failure_threshold:
             self._circuit_open_until = self._now() + self._circuit_breaker.open_seconds
+            self._emit_metric("notifier.circuit_open", 1.0)
 
 
 class SlackWebhookAlertSender(WebhookAlertSender):
@@ -140,6 +156,8 @@ class SlackWebhookAlertSender(WebhookAlertSender):
         post_json: Callable[[str, dict[str, Any], float], None] = _post_json_urllib,
         sleep: Callable[[float], None] = time.sleep,
         now: Callable[[], float] = time.time,
+        metric_fn: Callable[[str, float, dict[str, str]], None] | None = None,
+        metric_tags: dict[str, str] | None = None,
     ) -> None:
         super().__init__(
             webhook_url,
@@ -149,6 +167,8 @@ class SlackWebhookAlertSender(WebhookAlertSender):
             post_json=post_json,
             sleep=sleep,
             now=now,
+            metric_fn=metric_fn,
+            metric_tags=metric_tags,
         )
 
 
@@ -160,17 +180,33 @@ def dispatch_routed_alerts(
     alerts: list[RoutedIngestionAlert],
     *,
     senders: dict[str, Callable[[RoutedIngestionAlert], None]],
+    metric_fn: Callable[[str, float, dict[str, str]], None] | None = None,
+    metric_tags: dict[str, str] | None = None,
 ) -> NotificationDispatchResult:
+    base_tags = {} if metric_tags is None else dict(metric_tags)
+
+    def emit_metric(name: str, value: float, **extra_tags: str) -> None:
+        if metric_fn is None:
+            return
+        tags = dict(base_tags)
+        tags.update(extra_tags)
+        metric_fn(name, value, tags)
+
     sent = 0
     dropped = 0
     for alert in alerts:
         sender = senders.get(alert.channel)
         if sender is None:
             dropped += 1
+            emit_metric("notifier.alert_dropped", 1.0, channel=alert.channel, reason="missing_sender")
             continue
         try:
             sender(alert)
             sent += 1
+            emit_metric("notifier.alert_sent", 1.0, channel=alert.channel)
         except Exception:
             dropped += 1
+            emit_metric("notifier.alert_dropped", 1.0, channel=alert.channel, reason="sender_error")
+    emit_metric("notifier.batch_sent", float(sent))
+    emit_metric("notifier.batch_dropped", float(dropped))
     return NotificationDispatchResult(sent=sent, dropped=dropped)

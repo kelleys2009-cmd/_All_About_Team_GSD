@@ -27,6 +27,7 @@
 - Includes deterministic dispatch accounting (`sent`/`dropped`).
 - Includes concrete webhook/slack sender classes with timeout + retry policy.
 - Includes failure classification (transient vs permanent) and circuit-breaker guard.
+- Includes optional metric hooks for send/drop/failure/circuit-open observability.
 
 ## Tests
 

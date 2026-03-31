@@ -159,6 +159,7 @@ class AlertNotifierTests(unittest.TestCase):
         )
 
     def test_dispatch_routed_alerts_drops_on_sender_error(self) -> None:
+        metrics: list[tuple[str, float, dict[str, str]]] = []
         result = dispatch_routed_alerts(
             [
                 RoutedIngestionAlert(
@@ -167,9 +168,19 @@ class AlertNotifierTests(unittest.TestCase):
                 )
             ],
             senders={"ops": lambda _alert: (_ for _ in ()).throw(URLError("down"))},
+            metric_fn=lambda name, value, tags: metrics.append((name, value, tags)),
+            metric_tags={"venue": "BINANCE_PERP"},
         )
         self.assertEqual(result.sent, 0)
         self.assertEqual(result.dropped, 1)
+        self.assertIn(
+            ("notifier.alert_dropped", 1.0, {"venue": "BINANCE_PERP", "channel": "ops", "reason": "sender_error"}),
+            metrics,
+        )
+        self.assertIn(
+            ("notifier.batch_dropped", 1.0, {"venue": "BINANCE_PERP"}),
+            metrics,
+        )
 
     def test_webhook_sender_classifies_4xx_as_permanent(self) -> None:
         def post_400(_url: str, _payload: dict[str, str], _timeout: float) -> None:
@@ -192,6 +203,7 @@ class AlertNotifierTests(unittest.TestCase):
     def test_webhook_sender_opens_circuit_after_threshold(self) -> None:
         now_value = {"t": 100.0}
         calls: list[int] = []
+        metrics: list[tuple[str, float, dict[str, str]]] = []
 
         def now() -> float:
             return now_value["t"]
@@ -207,6 +219,8 @@ class AlertNotifierTests(unittest.TestCase):
             post_json=always_fail,
             sleep=lambda _seconds: None,
             now=now,
+            metric_fn=lambda name, value, tags: metrics.append((name, value, tags)),
+            metric_tags={"venue": "KRAKEN"},
         )
         alert = RoutedIngestionAlert(
             alert=IngestionAlert(name="ingestion_retry_spike", severity="high", message="retry"),
@@ -221,6 +235,11 @@ class AlertNotifierTests(unittest.TestCase):
             sender(alert)
 
         self.assertEqual(len(calls), 2)
+        self.assertIn(("notifier.circuit_open", 1.0, {"venue": "KRAKEN"}), metrics)
+        self.assertIn(
+            ("notifier.circuit_open_drop", 1.0, {"venue": "KRAKEN", "channel": "ops"}),
+            metrics,
+        )
         now_value["t"] = 111.0
         with self.assertRaises(NotifierTransientError):
             sender(alert)
