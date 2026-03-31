@@ -41,6 +41,20 @@ def validate_notifier_slo_state_env(
     return errors
 
 
+def redact_notifier_slo_state_env(
+    env: dict[str, str],
+) -> dict[str, str]:
+    redacted = dict(env)
+    secret_keys = [
+        "TEAM_GSD_NOTIFIER_SLO_REDIS_PASSWORD",
+        "TEAM_GSD_NOTIFIER_SLO_REDIS_SSL_KEYFILE",
+    ]
+    for key in secret_keys:
+        if key in redacted and redacted[key]:
+            redacted[key] = "***REDACTED***"
+    return redacted
+
+
 class SqliteNotifierSLOStateStore:
     def __init__(self, db_path: Path | str):
         self._db_path = Path(db_path)

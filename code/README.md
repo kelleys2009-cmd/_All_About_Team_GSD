@@ -45,6 +45,7 @@
 - Supports optional Redis auth/TLS env vars (`..._USERNAME`, `..._PASSWORD`, `..._SSL`, `..._SSL_CA_CERT`).
 - Supports optional Redis client-cert TLS env vars (`..._SSL_CERTFILE`, `..._SSL_KEYFILE`).
 - Includes env validation helper for fail-fast Redis config diagnostics.
+- Includes env redaction helper to prevent secret leakage in diagnostics.
 
 ## Tests
 

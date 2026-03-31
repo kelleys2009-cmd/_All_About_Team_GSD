@@ -11,6 +11,7 @@ from market_data.notifier_slo_state_store import (
     SqliteNotifierSLOStateStore,
     create_notifier_slo_state_store_from_env,
     dedupe_notifier_slo_alerts_with_store,
+    redact_notifier_slo_state_env,
     validate_notifier_slo_state_env,
 )
 
@@ -59,6 +60,18 @@ class NotifierSLOStateStoreTests(unittest.TestCase):
         self.assertTrue(any("REDIS_URL" in error for error in errors))
         self.assertTrue(any("SSL_CA_CERT" in error for error in errors))
         self.assertTrue(any("CERTFILE and TEAM_GSD_NOTIFIER_SLO_REDIS_SSL_KEYFILE" in error for error in errors))
+
+    def test_redact_env_masks_sensitive_fields(self) -> None:
+        redacted = redact_notifier_slo_state_env(
+            {
+                "TEAM_GSD_NOTIFIER_SLO_REDIS_PASSWORD": "super-secret",
+                "TEAM_GSD_NOTIFIER_SLO_REDIS_SSL_KEYFILE": "/etc/ssl/private/client.key",
+                "TEAM_GSD_NOTIFIER_SLO_REDIS_SSL_CERTFILE": "/etc/ssl/certs/client.crt",
+            }
+        )
+        self.assertEqual(redacted["TEAM_GSD_NOTIFIER_SLO_REDIS_PASSWORD"], "***REDACTED***")
+        self.assertEqual(redacted["TEAM_GSD_NOTIFIER_SLO_REDIS_SSL_KEYFILE"], "***REDACTED***")
+        self.assertEqual(redacted["TEAM_GSD_NOTIFIER_SLO_REDIS_SSL_CERTFILE"], "/etc/ssl/certs/client.crt")
 
     def test_factory_defaults_to_sqlite(self) -> None:
         store = create_notifier_slo_state_store_from_env(
