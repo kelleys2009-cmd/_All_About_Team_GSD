@@ -37,6 +37,10 @@
 - Includes optional rolling-window evaluation via timestamped metric points.
 - Includes cooldown/dedup helpers to suppress repeated SLO alert spam.
 
+`market_data/notifier_slo_state_store.py`
+- SQLite-backed persistence for notifier SLO cooldown `last_sent_ms` state.
+- Includes helper to run dedupe with persisted state across process restarts.
+
 ## Tests
 
 ```bash
@@ -46,6 +50,7 @@ PYTHONPATH=. python3 -m unittest tests/test_ingestion_worker.py
 PYTHONPATH=. python3 -m unittest tests/test_ingestion_alerts.py
 PYTHONPATH=. python3 -m unittest tests/test_alert_notifiers.py
 PYTHONPATH=. python3 -m unittest tests/test_notifier_slo_policy.py
+PYTHONPATH=. python3 -m unittest tests/test_notifier_slo_state_store.py
 ```
 
 Postgres integration harness (runs only when DSN is provided):
