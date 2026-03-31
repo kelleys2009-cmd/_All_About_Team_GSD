@@ -44,6 +44,7 @@ from .notifier_slo_policy import (
 from .notifier_slo_state_store import (
     RedisNotifierSLOStateStore,
     SqliteNotifierSLOStateStore,
+    create_notifier_slo_state_store_from_env,
     dedupe_notifier_slo_alerts_with_store,
 )
 from .raw_store import (
@@ -94,6 +95,7 @@ __all__ = [
     "dedupe_notifier_slo_alerts",
     "RedisNotifierSLOStateStore",
     "SqliteNotifierSLOStateStore",
+    "create_notifier_slo_state_store_from_env",
     "dedupe_notifier_slo_alerts_with_store",
     "RawMarketEvent",
     "ReplayCheckpoint",

@@ -9,6 +9,7 @@ from market_data.notifier_slo_policy import NotifierSLOCooldownPolicy
 from market_data.notifier_slo_state_store import (
     RedisNotifierSLOStateStore,
     SqliteNotifierSLOStateStore,
+    create_notifier_slo_state_store_from_env,
     dedupe_notifier_slo_alerts_with_store,
 )
 
@@ -33,6 +34,36 @@ class _FakeRedis:
 
 
 class NotifierSLOStateStoreTests(unittest.TestCase):
+    def test_factory_defaults_to_sqlite(self) -> None:
+        store = create_notifier_slo_state_store_from_env(
+            env={"TEAM_GSD_NOTIFIER_SLO_SQLITE_PATH": "/tmp/teamgsd-state.db"}
+        )
+        self.assertIsInstance(store, SqliteNotifierSLOStateStore)
+
+    def test_factory_uses_redis_backend(self) -> None:
+        seen_urls: list[str] = []
+
+        def redis_factory(url: str) -> object:
+            seen_urls.append(url)
+            return _FakeRedis()
+
+        store = create_notifier_slo_state_store_from_env(
+            env={
+                "TEAM_GSD_NOTIFIER_SLO_STATE_BACKEND": "redis",
+                "TEAM_GSD_NOTIFIER_SLO_REDIS_URL": "redis://cache:6379/2",
+                "TEAM_GSD_NOTIFIER_SLO_REDIS_KEY": "teamgsd:test:key",
+            },
+            redis_client_factory=redis_factory,
+        )
+        self.assertIsInstance(store, RedisNotifierSLOStateStore)
+        self.assertEqual(seen_urls, ["redis://cache:6379/2"])
+
+    def test_factory_redis_requires_factory(self) -> None:
+        with self.assertRaises(ValueError):
+            create_notifier_slo_state_store_from_env(
+                env={"TEAM_GSD_NOTIFIER_SLO_STATE_BACKEND": "redis"}
+            )
+
     def test_sqlite_state_store_round_trip(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             store = SqliteNotifierSLOStateStore(Path(tmp) / "notifier_slo_state.db")

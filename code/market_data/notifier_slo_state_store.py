@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import os
 import sqlite3
 from pathlib import Path
+from typing import Callable
 
 from .ingestion_alerts import IngestionAlert
 from .notifier_slo_policy import NotifierSLOCooldownPolicy, dedupe_notifier_slo_alerts
@@ -98,3 +100,21 @@ def dedupe_notifier_slo_alerts_with_store(
     )
     store.save_state(new_state)
     return filtered
+
+
+def create_notifier_slo_state_store_from_env(
+    *,
+    env: dict[str, str] | None = None,
+    redis_client_factory: Callable[[str], object] | None = None,
+) -> SqliteNotifierSLOStateStore | RedisNotifierSLOStateStore:
+    source = os.environ if env is None else env
+    backend = source.get("TEAM_GSD_NOTIFIER_SLO_STATE_BACKEND", "sqlite").strip().lower()
+    if backend == "redis":
+        redis_url = source.get("TEAM_GSD_NOTIFIER_SLO_REDIS_URL", "redis://127.0.0.1:6379/0")
+        redis_key = source.get("TEAM_GSD_NOTIFIER_SLO_REDIS_KEY", "teamgsd:notifier_slo_state")
+        if redis_client_factory is None:
+            raise ValueError("redis_client_factory is required when backend=redis")
+        return RedisNotifierSLOStateStore(redis_client_factory(redis_url), key=redis_key)
+
+    sqlite_path = source.get("TEAM_GSD_NOTIFIER_SLO_SQLITE_PATH", "artifacts/notifier_slo_state.db")
+    return SqliteNotifierSLOStateStore(sqlite_path)

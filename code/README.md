@@ -41,6 +41,7 @@
 - SQLite-backed persistence for notifier SLO cooldown `last_sent_ms` state.
 - Includes helper to run dedupe with persisted state across process restarts.
 - Includes Redis-backed state adapter for multi-worker cooldown coordination.
+- Includes env-driven store factory (`TEAM_GSD_NOTIFIER_SLO_STATE_BACKEND=sqlite|redis`).
 
 ## Tests
 
