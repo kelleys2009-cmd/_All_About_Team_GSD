@@ -11,6 +11,7 @@ from market_data.notifier_slo_state_store import (
     SqliteNotifierSLOStateStore,
     create_notifier_slo_state_store_from_env,
     dedupe_notifier_slo_alerts_with_store,
+    validate_notifier_slo_state_env,
 )
 
 
@@ -34,6 +35,31 @@ class _FakeRedis:
 
 
 class NotifierSLOStateStoreTests(unittest.TestCase):
+    def test_validate_env_for_redis_secure_config(self) -> None:
+        errors = validate_notifier_slo_state_env(
+            {
+                "TEAM_GSD_NOTIFIER_SLO_STATE_BACKEND": "redis",
+                "TEAM_GSD_NOTIFIER_SLO_REDIS_URL": "redis://cache:6379/0",
+                "TEAM_GSD_NOTIFIER_SLO_REDIS_SSL": "true",
+                "TEAM_GSD_NOTIFIER_SLO_REDIS_SSL_CA_CERT": "/etc/ssl/ca.pem",
+                "TEAM_GSD_NOTIFIER_SLO_REDIS_SSL_CERTFILE": "/etc/ssl/client.crt",
+                "TEAM_GSD_NOTIFIER_SLO_REDIS_SSL_KEYFILE": "/etc/ssl/client.key",
+            }
+        )
+        self.assertEqual(errors, [])
+
+    def test_validate_env_reports_missing_fields(self) -> None:
+        errors = validate_notifier_slo_state_env(
+            {
+                "TEAM_GSD_NOTIFIER_SLO_STATE_BACKEND": "redis",
+                "TEAM_GSD_NOTIFIER_SLO_REDIS_SSL": "true",
+                "TEAM_GSD_NOTIFIER_SLO_REDIS_SSL_CERTFILE": "/etc/ssl/client.crt",
+            }
+        )
+        self.assertTrue(any("REDIS_URL" in error for error in errors))
+        self.assertTrue(any("SSL_CA_CERT" in error for error in errors))
+        self.assertTrue(any("CERTFILE and TEAM_GSD_NOTIFIER_SLO_REDIS_SSL_KEYFILE" in error for error in errors))
+
     def test_factory_defaults_to_sqlite(self) -> None:
         store = create_notifier_slo_state_store_from_env(
             env={"TEAM_GSD_NOTIFIER_SLO_SQLITE_PATH": "/tmp/teamgsd-state.db"}

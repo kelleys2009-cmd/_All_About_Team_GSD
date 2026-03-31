@@ -44,6 +44,7 @@
 - Includes env-driven store factory (`TEAM_GSD_NOTIFIER_SLO_STATE_BACKEND=sqlite|redis`).
 - Supports optional Redis auth/TLS env vars (`..._USERNAME`, `..._PASSWORD`, `..._SSL`, `..._SSL_CA_CERT`).
 - Supports optional Redis client-cert TLS env vars (`..._SSL_CERTFILE`, `..._SSL_KEYFILE`).
+- Includes env validation helper for fail-fast Redis config diagnostics.
 
 ## Tests
 

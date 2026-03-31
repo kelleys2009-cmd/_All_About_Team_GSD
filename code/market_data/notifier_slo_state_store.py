@@ -9,6 +9,38 @@ from .ingestion_alerts import IngestionAlert
 from .notifier_slo_policy import NotifierSLOCooldownPolicy, dedupe_notifier_slo_alerts
 
 
+def validate_notifier_slo_state_env(
+    env: dict[str, str],
+) -> list[str]:
+    backend = env.get("TEAM_GSD_NOTIFIER_SLO_STATE_BACKEND", "sqlite").strip().lower()
+    errors: list[str] = []
+    if backend != "redis":
+        return errors
+
+    redis_url = env.get("TEAM_GSD_NOTIFIER_SLO_REDIS_URL", "").strip()
+    redis_ssl = str(env.get("TEAM_GSD_NOTIFIER_SLO_REDIS_SSL", "")).strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+    redis_username = env.get("TEAM_GSD_NOTIFIER_SLO_REDIS_USERNAME", "").strip()
+    redis_password = env.get("TEAM_GSD_NOTIFIER_SLO_REDIS_PASSWORD", "").strip()
+    redis_ssl_ca = env.get("TEAM_GSD_NOTIFIER_SLO_REDIS_SSL_CA_CERT", "").strip()
+    redis_ssl_certfile = env.get("TEAM_GSD_NOTIFIER_SLO_REDIS_SSL_CERTFILE", "").strip()
+    redis_ssl_keyfile = env.get("TEAM_GSD_NOTIFIER_SLO_REDIS_SSL_KEYFILE", "").strip()
+
+    if not redis_url:
+        errors.append("TEAM_GSD_NOTIFIER_SLO_REDIS_URL is required when backend=redis")
+    if redis_username and not redis_password:
+        errors.append("TEAM_GSD_NOTIFIER_SLO_REDIS_PASSWORD is required when TEAM_GSD_NOTIFIER_SLO_REDIS_USERNAME is set")
+    if redis_ssl and not redis_ssl_ca:
+        errors.append("TEAM_GSD_NOTIFIER_SLO_REDIS_SSL_CA_CERT is required when TEAM_GSD_NOTIFIER_SLO_REDIS_SSL=true")
+    if bool(redis_ssl_certfile) != bool(redis_ssl_keyfile):
+        errors.append("TEAM_GSD_NOTIFIER_SLO_REDIS_SSL_CERTFILE and TEAM_GSD_NOTIFIER_SLO_REDIS_SSL_KEYFILE must be set together")
+    return errors
+
+
 class SqliteNotifierSLOStateStore:
     def __init__(self, db_path: Path | str):
         self._db_path = Path(db_path)
@@ -111,6 +143,9 @@ def create_notifier_slo_state_store_from_env(
         return str(value or "").strip().lower() in {"1", "true", "yes", "on"}
 
     source = os.environ if env is None else env
+    validation_errors = validate_notifier_slo_state_env(source)
+    if validation_errors:
+        raise ValueError("; ".join(validation_errors))
     backend = source.get("TEAM_GSD_NOTIFIER_SLO_STATE_BACKEND", "sqlite").strip().lower()
     if backend == "redis":
         redis_url = source.get("TEAM_GSD_NOTIFIER_SLO_REDIS_URL", "redis://127.0.0.1:6379/0")

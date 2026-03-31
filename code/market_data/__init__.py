@@ -46,6 +46,7 @@ from .notifier_slo_state_store import (
     SqliteNotifierSLOStateStore,
     create_notifier_slo_state_store_from_env,
     dedupe_notifier_slo_alerts_with_store,
+    validate_notifier_slo_state_env,
 )
 from .raw_store import (
     PostgresRawEventStore,
@@ -97,6 +98,7 @@ __all__ = [
     "SqliteNotifierSLOStateStore",
     "create_notifier_slo_state_store_from_env",
     "dedupe_notifier_slo_alerts_with_store",
+    "validate_notifier_slo_state_env",
     "RawMarketEvent",
     "ReplayCheckpoint",
     "SqliteRawEventStore",
