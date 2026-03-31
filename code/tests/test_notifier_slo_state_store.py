@@ -7,8 +7,10 @@ from pathlib import Path
 from market_data.ingestion_alerts import IngestionAlert
 from market_data.notifier_slo_policy import NotifierSLOCooldownPolicy
 from market_data.notifier_slo_state_store import (
+    NotifierSLOStateEnvDebugSnapshot,
     RedisNotifierSLOStateStore,
     SqliteNotifierSLOStateStore,
+    build_notifier_slo_state_env_debug_snapshot,
     create_notifier_slo_state_store_from_env,
     dedupe_notifier_slo_alerts_with_store,
     redact_notifier_slo_state_env,
@@ -36,6 +38,20 @@ class _FakeRedis:
 
 
 class NotifierSLOStateStoreTests(unittest.TestCase):
+    def test_build_debug_snapshot_combines_validation_and_redaction(self) -> None:
+        snapshot = build_notifier_slo_state_env_debug_snapshot(
+            {
+                "TEAM_GSD_NOTIFIER_SLO_STATE_BACKEND": "redis",
+                "TEAM_GSD_NOTIFIER_SLO_REDIS_SSL": "true",
+                "TEAM_GSD_NOTIFIER_SLO_REDIS_PASSWORD": "secret",
+            }
+        )
+        self.assertIsInstance(snapshot, NotifierSLOStateEnvDebugSnapshot)
+        self.assertEqual(snapshot.backend, "redis")
+        self.assertFalse(snapshot.valid)
+        self.assertTrue(any("REDIS_URL" in error for error in snapshot.errors))
+        self.assertEqual(snapshot.redacted_env["TEAM_GSD_NOTIFIER_SLO_REDIS_PASSWORD"], "***REDACTED***")
+
     def test_validate_env_for_redis_secure_config(self) -> None:
         errors = validate_notifier_slo_state_env(
             {

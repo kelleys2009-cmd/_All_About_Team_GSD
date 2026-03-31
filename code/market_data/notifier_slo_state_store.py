@@ -2,11 +2,20 @@ from __future__ import annotations
 
 import os
 import sqlite3
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable
 
 from .ingestion_alerts import IngestionAlert
 from .notifier_slo_policy import NotifierSLOCooldownPolicy, dedupe_notifier_slo_alerts
+
+
+@dataclass(frozen=True)
+class NotifierSLOStateEnvDebugSnapshot:
+    backend: str
+    valid: bool
+    errors: list[str]
+    redacted_env: dict[str, str]
 
 
 def validate_notifier_slo_state_env(
@@ -53,6 +62,19 @@ def redact_notifier_slo_state_env(
         if key in redacted and redacted[key]:
             redacted[key] = "***REDACTED***"
     return redacted
+
+
+def build_notifier_slo_state_env_debug_snapshot(
+    env: dict[str, str],
+) -> NotifierSLOStateEnvDebugSnapshot:
+    backend = env.get("TEAM_GSD_NOTIFIER_SLO_STATE_BACKEND", "sqlite").strip().lower()
+    errors = validate_notifier_slo_state_env(env)
+    return NotifierSLOStateEnvDebugSnapshot(
+        backend=backend,
+        valid=len(errors) == 0,
+        errors=errors,
+        redacted_env=redact_notifier_slo_state_env(env),
+    )
 
 
 class SqliteNotifierSLOStateStore:

@@ -46,6 +46,7 @@
 - Supports optional Redis client-cert TLS env vars (`..._SSL_CERTFILE`, `..._SSL_KEYFILE`).
 - Includes env validation helper for fail-fast Redis config diagnostics.
 - Includes env redaction helper to prevent secret leakage in diagnostics.
+- Includes a debug snapshot builder combining backend/validation/redacted env payloads.
 
 ## Tests
 
