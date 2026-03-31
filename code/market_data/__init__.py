@@ -33,6 +33,11 @@ from .ingestion_alerts import (
     evaluate_ingestion_slo,
     route_ingestion_alerts,
 )
+from .notifier_slo_policy import (
+    NotifierSLOPolicy,
+    default_notifier_slo_policies,
+    evaluate_notifier_slo_policies,
+)
 from .raw_store import (
     PostgresRawEventStore,
     RawMarketEvent,
@@ -73,6 +78,9 @@ __all__ = [
     "evaluate_ingestion_slo",
     "route_ingestion_alerts",
     "dedupe_ingestion_alerts",
+    "NotifierSLOPolicy",
+    "default_notifier_slo_policies",
+    "evaluate_notifier_slo_policies",
     "RawMarketEvent",
     "ReplayCheckpoint",
     "SqliteRawEventStore",

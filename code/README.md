@@ -31,6 +31,10 @@
 - Includes optional metric hooks for send/drop/failure/circuit-open observability.
 - Includes notifier metric schema contract validation (required base tags + reason enum checks).
 
+`market_data/notifier_slo_policy.py`
+- Maps notifier metric streams into actionable SLO alert records.
+- Includes default policy bindings for drop and circuit-open events.
+
 ## Tests
 
 ```bash
@@ -39,6 +43,7 @@ PYTHONPATH=. python3 -m unittest tests/test_normalization.py tests/test_raw_stor
 PYTHONPATH=. python3 -m unittest tests/test_ingestion_worker.py
 PYTHONPATH=. python3 -m unittest tests/test_ingestion_alerts.py
 PYTHONPATH=. python3 -m unittest tests/test_alert_notifiers.py
+PYTHONPATH=. python3 -m unittest tests/test_notifier_slo_policy.py
 ```
 
 Postgres integration harness (runs only when DSN is provided):
