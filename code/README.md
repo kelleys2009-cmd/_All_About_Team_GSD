@@ -40,6 +40,7 @@
 `market_data/notifier_slo_state_store.py`
 - SQLite-backed persistence for notifier SLO cooldown `last_sent_ms` state.
 - Includes helper to run dedupe with persisted state across process restarts.
+- Includes Redis-backed state adapter for multi-worker cooldown coordination.
 
 ## Tests
 

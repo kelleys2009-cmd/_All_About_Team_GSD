@@ -42,6 +42,7 @@ from .notifier_slo_policy import (
     evaluate_notifier_slo_policies,
 )
 from .notifier_slo_state_store import (
+    RedisNotifierSLOStateStore,
     SqliteNotifierSLOStateStore,
     dedupe_notifier_slo_alerts_with_store,
 )
@@ -91,6 +92,7 @@ __all__ = [
     "default_notifier_slo_policies",
     "evaluate_notifier_slo_policies",
     "dedupe_notifier_slo_alerts",
+    "RedisNotifierSLOStateStore",
     "SqliteNotifierSLOStateStore",
     "dedupe_notifier_slo_alerts_with_store",
     "RawMarketEvent",
