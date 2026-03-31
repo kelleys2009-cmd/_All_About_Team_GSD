@@ -73,6 +73,8 @@ class NotifierSLOStateStoreTests(unittest.TestCase):
                 "TEAM_GSD_NOTIFIER_SLO_REDIS_PASSWORD": "secret",
                 "TEAM_GSD_NOTIFIER_SLO_REDIS_SSL": "true",
                 "TEAM_GSD_NOTIFIER_SLO_REDIS_SSL_CA_CERT": "/etc/ssl/ca.pem",
+                "TEAM_GSD_NOTIFIER_SLO_REDIS_SSL_CERTFILE": "/etc/ssl/client.crt",
+                "TEAM_GSD_NOTIFIER_SLO_REDIS_SSL_KEYFILE": "/etc/ssl/client.key",
             },
             redis_client_factory=redis_factory,
         )
@@ -87,6 +89,8 @@ class NotifierSLOStateStoreTests(unittest.TestCase):
                         "password": "secret",
                         "ssl": True,
                         "ssl_ca_certs": "/etc/ssl/ca.pem",
+                        "ssl_certfile": "/etc/ssl/client.crt",
+                        "ssl_keyfile": "/etc/ssl/client.key",
                     },
                 )
             ],

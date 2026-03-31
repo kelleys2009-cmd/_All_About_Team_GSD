@@ -122,6 +122,8 @@ def create_notifier_slo_state_store_from_env(
         redis_password = source.get("TEAM_GSD_NOTIFIER_SLO_REDIS_PASSWORD")
         redis_ssl = _parse_bool(source.get("TEAM_GSD_NOTIFIER_SLO_REDIS_SSL"))
         redis_ssl_ca = source.get("TEAM_GSD_NOTIFIER_SLO_REDIS_SSL_CA_CERT")
+        redis_ssl_certfile = source.get("TEAM_GSD_NOTIFIER_SLO_REDIS_SSL_CERTFILE")
+        redis_ssl_keyfile = source.get("TEAM_GSD_NOTIFIER_SLO_REDIS_SSL_KEYFILE")
         if redis_username:
             redis_kwargs["username"] = redis_username
         if redis_password:
@@ -130,6 +132,10 @@ def create_notifier_slo_state_store_from_env(
             redis_kwargs["ssl"] = True
         if redis_ssl_ca:
             redis_kwargs["ssl_ca_certs"] = redis_ssl_ca
+        if redis_ssl_certfile:
+            redis_kwargs["ssl_certfile"] = redis_ssl_certfile
+        if redis_ssl_keyfile:
+            redis_kwargs["ssl_keyfile"] = redis_ssl_keyfile
 
         try:
             redis_client = redis_client_factory(redis_url, **redis_kwargs)
