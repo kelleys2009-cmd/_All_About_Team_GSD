@@ -34,6 +34,7 @@ from .ingestion_alerts import (
     route_ingestion_alerts,
 )
 from .notifier_slo_policy import (
+    NotifierMetricPoint,
     NotifierSLOPolicy,
     default_notifier_slo_policies,
     evaluate_notifier_slo_policies,
@@ -78,6 +79,7 @@ __all__ = [
     "evaluate_ingestion_slo",
     "route_ingestion_alerts",
     "dedupe_ingestion_alerts",
+    "NotifierMetricPoint",
     "NotifierSLOPolicy",
     "default_notifier_slo_policies",
     "evaluate_notifier_slo_policies",

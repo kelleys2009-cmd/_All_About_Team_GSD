@@ -34,6 +34,7 @@
 `market_data/notifier_slo_policy.py`
 - Maps notifier metric streams into actionable SLO alert records.
 - Includes default policy bindings for drop and circuit-open events.
+- Includes optional rolling-window evaluation via timestamped metric points.
 
 ## Tests
 

@@ -3,6 +3,7 @@ from __future__ import annotations
 import unittest
 
 from market_data.notifier_slo_policy import (
+    NotifierMetricPoint,
     NotifierSLOPolicy,
     default_notifier_slo_policies,
     evaluate_notifier_slo_policies,
@@ -40,6 +41,28 @@ class NotifierSLOPolicyTests(unittest.TestCase):
         policies = default_notifier_slo_policies()
         self.assertEqual(policies[0].metric_name, "notifier.alert_dropped")
         self.assertEqual(policies[1].metric_name, "notifier.circuit_open")
+
+    def test_rolling_window_excludes_old_points(self) -> None:
+        alerts = evaluate_notifier_slo_policies(
+            metrics=[],
+            metric_points=[
+                NotifierMetricPoint(
+                    ts_ms=1000,
+                    metric_name="notifier.alert_dropped",
+                    value=1.0,
+                    tags={"venue": "BINANCE_PERP", "symbol": "BTC-USD-PERP", "timeframe": "1m"},
+                ),
+                NotifierMetricPoint(
+                    ts_ms=3000,
+                    metric_name="notifier.alert_dropped",
+                    value=1.0,
+                    tags={"venue": "BINANCE_PERP", "symbol": "BTC-USD-PERP", "timeframe": "1m"},
+                ),
+            ],
+            window_ms=1000,
+            now_ms=3000,
+        )
+        self.assertEqual([alert.name for alert in alerts], ["notifier_delivery_drop"])
 
 
 if __name__ == "__main__":
