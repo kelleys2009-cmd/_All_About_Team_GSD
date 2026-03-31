@@ -60,11 +60,13 @@ class NotifierSLOStateStoreTests(unittest.TestCase):
             self.assertIsInstance(sqlite_probe, NotifierSLOStateStoreProbeResult)
             self.assertTrue(sqlite_probe.ok)
             self.assertEqual(sqlite_probe.backend, "sqlite")
+            self.assertGreaterEqual(sqlite_probe.latency_ms, 0.0)
 
         redis_store = RedisNotifierSLOStateStore(_FakeRedis(), key="test:notifier")
         redis_probe = probe_notifier_slo_state_store_connectivity(redis_store)
         self.assertTrue(redis_probe.ok)
         self.assertEqual(redis_probe.backend, "redis")
+        self.assertGreaterEqual(redis_probe.latency_ms, 0.0)
         redis_write_probe = probe_notifier_slo_state_store_connectivity(redis_store, write_check=True)
         self.assertTrue(redis_write_probe.ok)
         self.assertIn("read/write", redis_write_probe.detail)
@@ -79,6 +81,17 @@ class NotifierSLOStateStoreTests(unittest.TestCase):
         probe = probe_notifier_slo_state_store_connectivity(redis_store, write_check=True)
         self.assertFalse(probe.ok)
         self.assertIn("RuntimeError", probe.detail)
+
+    def test_probe_timeout_budget(self) -> None:
+        times = [100.0, 100.5]
+
+        def fake_now() -> float:
+            return times.pop(0)
+
+        store = RedisNotifierSLOStateStore(_FakeRedis(), key="test:notifier")
+        probe = probe_notifier_slo_state_store_connectivity(store, timeout_ms=100.0, now_fn=fake_now)
+        self.assertFalse(probe.ok)
+        self.assertIn("timeout budget", probe.detail)
 
     def test_probe_connectivity_redis_failure(self) -> None:
         class _BrokenRedis(_FakeRedis):

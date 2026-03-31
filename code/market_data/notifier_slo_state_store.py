@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import sqlite3
+import time
 import uuid
 from dataclasses import dataclass
 from pathlib import Path
@@ -24,6 +25,7 @@ class NotifierSLOStateStoreProbeResult:
     backend: str
     ok: bool
     detail: str
+    latency_ms: float
 
 
 def validate_notifier_slo_state_env(
@@ -182,7 +184,28 @@ def probe_notifier_slo_state_store_connectivity(
     store: SqliteNotifierSLOStateStore | RedisNotifierSLOStateStore,
     *,
     write_check: bool = False,
+    timeout_ms: float | None = None,
+    now_fn: Callable[[], float] | None = None,
 ) -> NotifierSLOStateStoreProbeResult:
+    clock = now_fn or time.perf_counter
+    started = clock()
+
+    def _result(backend: str, ok: bool, detail: str) -> NotifierSLOStateStoreProbeResult:
+        latency_ms = (clock() - started) * 1000.0
+        if timeout_ms is not None and latency_ms > timeout_ms:
+            return NotifierSLOStateStoreProbeResult(
+                backend=backend,
+                ok=False,
+                detail=f"{backend} connectivity probe exceeded timeout budget",
+                latency_ms=latency_ms,
+            )
+        return NotifierSLOStateStoreProbeResult(
+            backend=backend,
+            ok=ok,
+            detail=detail,
+            latency_ms=latency_ms,
+        )
+
     try:
         if isinstance(store, SqliteNotifierSLOStateStore):
             with store._connect() as conn:
@@ -197,7 +220,7 @@ def probe_notifier_slo_state_store_connectivity(
                         (probe_id, 1),
                     )
                     conn.execute("DELETE FROM notifier_slo_probe WHERE id = ?", (probe_id,))
-            return NotifierSLOStateStoreProbeResult(
+            return _result(
                 backend="sqlite",
                 ok=True,
                 detail="sqlite connectivity OK" if not write_check else "sqlite read/write probe OK",
@@ -220,14 +243,14 @@ def probe_notifier_slo_state_store_connectivity(
             del_fn(probe_key)
             if str(got) not in {"1", "b'1'"}:
                 raise RuntimeError("redis write_check value mismatch")
-        return NotifierSLOStateStoreProbeResult(
+        return _result(
             backend="redis",
             ok=True,
             detail="redis connectivity OK" if not write_check else "redis read/write probe OK",
         )
     except Exception as exc:
         backend = "redis" if isinstance(store, RedisNotifierSLOStateStore) else "sqlite"
-        return NotifierSLOStateStoreProbeResult(
+        return _result(
             backend=backend,
             ok=False,
             detail=f"{backend} connectivity probe failed: {exc.__class__.__name__}",
