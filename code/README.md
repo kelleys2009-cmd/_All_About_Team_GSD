@@ -62,3 +62,11 @@ cd code
 TEAM_GSD_TEST_POSTGRES_DSN='postgresql://user:pass@localhost:5432/dbname' \
 PYTHONPATH=. python3 -m unittest tests.integration.test_postgres_raw_store_integration
 ```
+
+Redis notifier SLO integration harness (runs only when URL is provided):
+
+```bash
+cd code
+TEAM_GSD_TEST_REDIS_URL='redis://127.0.0.1:6379/0' \
+PYTHONPATH=. python3 -m unittest tests.integration.test_redis_notifier_slo_state_store_integration
+```
