@@ -11,6 +11,9 @@ from typing import Callable
 from .ingestion_alerts import IngestionAlert
 from .notifier_slo_policy import NotifierSLOCooldownPolicy, dedupe_notifier_slo_alerts
 
+PROBE_METRIC_MAX_TAG_KEY_LEN = 64
+PROBE_METRIC_MAX_TAG_VALUE_LEN = 128
+
 
 @dataclass(frozen=True)
 class NotifierSLOStateEnvDebugSnapshot:
@@ -95,12 +98,12 @@ def _sanitize_metric_tags(metric_tags: dict[str, object] | None) -> dict[str, st
         return {}
     sanitized: dict[str, str] = {}
     for key, value in metric_tags.items():
-        key_str = str(key).strip()
+        key_str = str(key).strip()[:PROBE_METRIC_MAX_TAG_KEY_LEN]
         if not key_str:
             continue
         if value is None:
             continue
-        sanitized[key_str] = str(value)
+        sanitized[key_str] = str(value)[:PROBE_METRIC_MAX_TAG_VALUE_LEN]
     return sanitized
 
 

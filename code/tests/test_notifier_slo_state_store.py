@@ -9,6 +9,8 @@ from market_data.notifier_slo_policy import NotifierSLOCooldownPolicy
 from market_data.notifier_slo_state_store import (
     NotifierSLOStateStoreProbeResult,
     NotifierSLOStateEnvDebugSnapshot,
+    PROBE_METRIC_MAX_TAG_KEY_LEN,
+    PROBE_METRIC_MAX_TAG_VALUE_LEN,
     RedisNotifierSLOStateStore,
     SqliteNotifierSLOStateStore,
     build_notifier_slo_state_env_debug_snapshot,
@@ -264,6 +266,27 @@ class NotifierSLOStateStoreTests(unittest.TestCase):
         )
         for _, _, tags in metrics:
             self.assertNotIn("optional", tags)
+
+    def test_emit_probe_metrics_truncates_long_tag_key_and_value(self) -> None:
+        metrics: list[tuple[str, float, dict[str, str]]] = []
+        long_key = "k" * (PROBE_METRIC_MAX_TAG_KEY_LEN + 20)
+        long_value = "v" * (PROBE_METRIC_MAX_TAG_VALUE_LEN + 40)
+        emit_notifier_slo_probe_metrics(
+            NotifierSLOStateStoreProbeResult(
+                backend="redis",
+                ok=False,
+                detail="redis connectivity probe failed: RuntimeError",
+                latency_ms=1.5,
+                error_class="runtime",
+            ),
+            metric_fn=lambda name, value, tags: metrics.append((name, value, tags)),
+            metric_tags={long_key: long_value},  # type: ignore[arg-type]
+        )
+        failure_tags = [tags for name, _, tags in metrics if name == "notifier.state_probe.failure"][0]
+        expected_key = "k" * PROBE_METRIC_MAX_TAG_KEY_LEN
+        expected_value = "v" * PROBE_METRIC_MAX_TAG_VALUE_LEN
+        self.assertIn(expected_key, failure_tags)
+        self.assertEqual(failure_tags[expected_key], expected_value)
 
     def test_probe_connectivity_sqlite_and_redis(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

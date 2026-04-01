@@ -60,6 +60,7 @@
 - Non-whitelisted `check_mode` inputs are normalized to `other` before metric emission.
 - Caller-provided metric tags are sanitized to string keys/values and empty keys are dropped.
 - Caller-provided metric tags with `None` values are dropped during sanitization.
+- Caller-provided metric tag keys/values are length-bounded (64-char keys, 128-char values).
 
 ## Tests
 
