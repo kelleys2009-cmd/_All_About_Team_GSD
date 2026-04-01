@@ -90,6 +90,18 @@ def _normalize_probe_check_mode(value: str) -> str:
     return "other"
 
 
+def _sanitize_metric_tags(metric_tags: dict[str, object] | None) -> dict[str, str]:
+    if metric_tags is None:
+        return {}
+    sanitized: dict[str, str] = {}
+    for key, value in metric_tags.items():
+        key_str = str(key).strip()
+        if not key_str:
+            continue
+        sanitized[key_str] = str(value)
+    return sanitized
+
+
 def validate_notifier_slo_state_env(
     env: dict[str, str],
 ) -> list[str]:
@@ -335,11 +347,11 @@ def emit_notifier_slo_probe_metrics(
     probe: NotifierSLOStateStoreProbeResult,
     *,
     metric_fn: Callable[[str, float, dict[str, str]], None] | None,
-    metric_tags: dict[str, str] | None = None,
+    metric_tags: dict[str, object] | None = None,
 ) -> None:
     if metric_fn is None:
         return
-    tags = {} if metric_tags is None else dict(metric_tags)
+    tags = _sanitize_metric_tags(metric_tags)
     tags["backend"] = _normalize_probe_backend(probe.backend)
     tags["ok"] = "true" if probe.ok else "false"
     tags["check_mode"] = _normalize_probe_check_mode(probe.check_mode)

@@ -58,6 +58,7 @@
 - Probe metric `backend` tag is normalized to `sqlite|redis|other`.
 - Probe metrics include `check_mode=read|read_write` to distinguish read-only vs write-path probes.
 - Non-whitelisted `check_mode` inputs are normalized to `other` before metric emission.
+- Caller-provided metric tags are sanitized to string keys/values and empty keys are dropped.
 
 ## Tests
 

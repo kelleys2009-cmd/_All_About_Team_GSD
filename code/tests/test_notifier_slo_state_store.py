@@ -233,6 +233,36 @@ class NotifierSLOStateStoreTests(unittest.TestCase):
             metrics,
         )
 
+    def test_emit_probe_metrics_sanitizes_metric_tags(self) -> None:
+        metrics: list[tuple[str, float, dict[str, str]]] = []
+        emit_notifier_slo_probe_metrics(
+            NotifierSLOStateStoreProbeResult(
+                backend="redis",
+                ok=False,
+                detail="redis connectivity probe failed: RuntimeError",
+                latency_ms=2.1,
+                error_class="runtime",
+            ),
+            metric_fn=lambda name, value, tags: metrics.append((name, value, tags)),
+            metric_tags={"service": "ingestion", "attempt": 3, "": "ignored", "enabled": True},  # type: ignore[arg-type]
+        )
+        self.assertIn(
+            (
+                "notifier.state_probe.failure",
+                1.0,
+                {
+                    "service": "ingestion",
+                    "attempt": "3",
+                    "enabled": "True",
+                    "backend": "redis",
+                    "ok": "false",
+                    "error_class": "runtime",
+                    "check_mode": "read",
+                },
+            ),
+            metrics,
+        )
+
     def test_probe_connectivity_sqlite_and_redis(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             sqlite_store = SqliteNotifierSLOStateStore(Path(tmp) / "notifier_slo_state.db")
