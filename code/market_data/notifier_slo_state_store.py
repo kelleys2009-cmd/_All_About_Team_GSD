@@ -83,6 +83,13 @@ def _normalize_probe_backend(value: str) -> str:
     return "other"
 
 
+def _normalize_probe_check_mode(value: str) -> str:
+    normalized = value.strip().lower()
+    if normalized in {"read", "read_write"}:
+        return normalized
+    return "other"
+
+
 def validate_notifier_slo_state_env(
     env: dict[str, str],
 ) -> list[str]:
@@ -335,7 +342,7 @@ def emit_notifier_slo_probe_metrics(
     tags = {} if metric_tags is None else dict(metric_tags)
     tags["backend"] = _normalize_probe_backend(probe.backend)
     tags["ok"] = "true" if probe.ok else "false"
-    tags["check_mode"] = probe.check_mode
+    tags["check_mode"] = _normalize_probe_check_mode(probe.check_mode)
     if not probe.ok:
         error_class = _normalize_probe_error_class(probe.error_class)
         if error_class is None:
