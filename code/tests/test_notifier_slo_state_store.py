@@ -11,6 +11,7 @@ from market_data.notifier_slo_state_store import (
     NotifierSLOStateEnvDebugSnapshot,
     PROBE_METRIC_MAX_TAG_KEY_LEN,
     PROBE_METRIC_MAX_TAG_VALUE_LEN,
+    PROBE_METRIC_MAX_CUSTOM_TAGS,
     RedisNotifierSLOStateStore,
     SqliteNotifierSLOStateStore,
     build_notifier_slo_state_env_debug_snapshot,
@@ -287,6 +288,24 @@ class NotifierSLOStateStoreTests(unittest.TestCase):
         expected_value = "v" * PROBE_METRIC_MAX_TAG_VALUE_LEN
         self.assertIn(expected_key, failure_tags)
         self.assertEqual(failure_tags[expected_key], expected_value)
+
+    def test_emit_probe_metrics_limits_custom_tag_count(self) -> None:
+        metrics: list[tuple[str, float, dict[str, str]]] = []
+        custom_tags = {f"k{i}": f"v{i}" for i in range(PROBE_METRIC_MAX_CUSTOM_TAGS + 5)}
+        emit_notifier_slo_probe_metrics(
+            NotifierSLOStateStoreProbeResult(
+                backend="redis",
+                ok=False,
+                detail="redis connectivity probe failed: RuntimeError",
+                latency_ms=1.0,
+                error_class="runtime",
+            ),
+            metric_fn=lambda name, value, tags: metrics.append((name, value, tags)),
+            metric_tags=custom_tags,  # type: ignore[arg-type]
+        )
+        failure_tags = [tags for name, _, tags in metrics if name == "notifier.state_probe.failure"][0]
+        custom_keys_present = [key for key in failure_tags.keys() if key.startswith("k")]
+        self.assertEqual(len(custom_keys_present), PROBE_METRIC_MAX_CUSTOM_TAGS)
 
     def test_probe_connectivity_sqlite_and_redis(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

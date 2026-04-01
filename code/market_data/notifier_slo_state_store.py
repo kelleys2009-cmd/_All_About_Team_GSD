@@ -13,6 +13,7 @@ from .notifier_slo_policy import NotifierSLOCooldownPolicy, dedupe_notifier_slo_
 
 PROBE_METRIC_MAX_TAG_KEY_LEN = 64
 PROBE_METRIC_MAX_TAG_VALUE_LEN = 128
+PROBE_METRIC_MAX_CUSTOM_TAGS = 12
 
 
 @dataclass(frozen=True)
@@ -97,13 +98,17 @@ def _sanitize_metric_tags(metric_tags: dict[str, object] | None) -> dict[str, st
     if metric_tags is None:
         return {}
     sanitized: dict[str, str] = {}
+    count = 0
     for key, value in metric_tags.items():
+        if count >= PROBE_METRIC_MAX_CUSTOM_TAGS:
+            break
         key_str = str(key).strip()[:PROBE_METRIC_MAX_TAG_KEY_LEN]
         if not key_str:
             continue
         if value is None:
             continue
         sanitized[key_str] = str(value)[:PROBE_METRIC_MAX_TAG_VALUE_LEN]
+        count += 1
     return sanitized
 
 
