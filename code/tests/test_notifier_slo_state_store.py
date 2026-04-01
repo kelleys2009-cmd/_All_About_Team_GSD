@@ -97,6 +97,20 @@ class NotifierSLOStateStoreTests(unittest.TestCase):
             ),
             metrics,
         )
+        self.assertIn(
+            (
+                "notifier.state_probe.custom_tags_dropped",
+                0.0,
+                {
+                    "service": "ingestion",
+                    "backend": "redis",
+                    "ok": "false",
+                    "error_class": "runtime",
+                    "check_mode": "read",
+                },
+            ),
+            metrics,
+        )
 
     def test_emit_probe_metrics_timeout_error_class(self) -> None:
         metrics: list[tuple[str, float, dict[str, str]]] = []
@@ -171,7 +185,7 @@ class NotifierSLOStateStoreTests(unittest.TestCase):
             metric_fn=mutating_metric_fn,
             metric_tags={"service": "ingestion"},
         )
-        self.assertEqual(len(seen), 3)
+        self.assertEqual(len(seen), 4)
         for _, _, tags in seen:
             self.assertEqual(tags["backend"], "redis")
             self.assertEqual(tags["ok"], "false")
@@ -267,6 +281,22 @@ class NotifierSLOStateStoreTests(unittest.TestCase):
         )
         for _, _, tags in metrics:
             self.assertNotIn("optional", tags)
+        self.assertIn(
+            (
+                "notifier.state_probe.custom_tags_dropped",
+                2.0,
+                {
+                    "service": "ingestion",
+                    "attempt": "3",
+                    "enabled": "True",
+                    "backend": "redis",
+                    "ok": "false",
+                    "error_class": "runtime",
+                    "check_mode": "read",
+                },
+            ),
+            metrics,
+        )
 
     def test_emit_probe_metrics_truncates_long_tag_key_and_value(self) -> None:
         metrics: list[tuple[str, float, dict[str, str]]] = []
@@ -306,6 +336,20 @@ class NotifierSLOStateStoreTests(unittest.TestCase):
         failure_tags = [tags for name, _, tags in metrics if name == "notifier.state_probe.failure"][0]
         custom_keys_present = [key for key in failure_tags.keys() if key.startswith("k")]
         self.assertEqual(len(custom_keys_present), PROBE_METRIC_MAX_CUSTOM_TAGS)
+        self.assertIn(
+            (
+                "notifier.state_probe.custom_tags_dropped",
+                5.0,
+                {
+                    **{f"k{i}": f"v{i}" for i in range(PROBE_METRIC_MAX_CUSTOM_TAGS)},
+                    "backend": "redis",
+                    "ok": "false",
+                    "error_class": "runtime",
+                    "check_mode": "read",
+                },
+            ),
+            metrics,
+        )
 
     def test_probe_connectivity_sqlite_and_redis(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

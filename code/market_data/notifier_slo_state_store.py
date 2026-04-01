@@ -94,22 +94,26 @@ def _normalize_probe_check_mode(value: str) -> str:
     return "other"
 
 
-def _sanitize_metric_tags(metric_tags: dict[str, object] | None) -> dict[str, str]:
+def _sanitize_metric_tags(metric_tags: dict[str, object] | None) -> tuple[dict[str, str], int]:
     if metric_tags is None:
-        return {}
+        return {}, 0
     sanitized: dict[str, str] = {}
     count = 0
+    dropped = 0
     for key, value in metric_tags.items():
         if count >= PROBE_METRIC_MAX_CUSTOM_TAGS:
-            break
+            dropped += 1
+            continue
         key_str = str(key).strip()[:PROBE_METRIC_MAX_TAG_KEY_LEN]
         if not key_str:
+            dropped += 1
             continue
         if value is None:
+            dropped += 1
             continue
         sanitized[key_str] = str(value)[:PROBE_METRIC_MAX_TAG_VALUE_LEN]
         count += 1
-    return sanitized
+    return sanitized, dropped
 
 
 def validate_notifier_slo_state_env(
@@ -361,7 +365,7 @@ def emit_notifier_slo_probe_metrics(
 ) -> None:
     if metric_fn is None:
         return
-    tags = _sanitize_metric_tags(metric_tags)
+    tags, custom_tags_dropped = _sanitize_metric_tags(metric_tags)
     tags["backend"] = _normalize_probe_backend(probe.backend)
     tags["ok"] = "true" if probe.ok else "false"
     tags["check_mode"] = _normalize_probe_check_mode(probe.check_mode)
@@ -374,6 +378,7 @@ def emit_notifier_slo_probe_metrics(
     metric_fn("notifier.state_probe.latency_ms", probe.latency_ms, dict(tags))
     metric_fn("notifier.state_probe.success", 1.0 if probe.ok else 0.0, dict(tags))
     metric_fn("notifier.state_probe.failure", 0.0 if probe.ok else 1.0, dict(tags))
+    metric_fn("notifier.state_probe.custom_tags_dropped", float(custom_tags_dropped), dict(tags))
 
 
 def create_notifier_slo_state_store_from_env(

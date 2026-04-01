@@ -62,6 +62,7 @@
 - Caller-provided metric tags with `None` values are dropped during sanitization.
 - Caller-provided metric tag keys/values are length-bounded (64-char keys, 128-char values).
 - Caller-provided custom metric tags are capped at 12 keys per emission.
+- Probe metrics include `notifier.state_probe.custom_tags_dropped` to surface dropped caller tags.
 
 ## Tests
 
