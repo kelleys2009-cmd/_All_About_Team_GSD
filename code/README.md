@@ -65,6 +65,7 @@
 - Probe metrics include `notifier.state_probe.custom_tags_dropped` to surface dropped caller tags.
 - Probe metrics also include split counters for dropped-tag reasons: `..._invalid` and `..._over_cap`.
 - Probe metrics include `notifier.state_probe.custom_tags_accepted` for accepted caller tag counts.
+- Probe metrics include `notifier.state_probe.custom_tags_drop_rate` for drop ratio per emission.
 
 ## Tests
 

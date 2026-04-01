@@ -369,6 +369,8 @@ def emit_notifier_slo_probe_metrics(
     tags, custom_tags_dropped_invalid, custom_tags_dropped_over_cap = _sanitize_metric_tags(metric_tags)
     custom_tags_accepted = len(tags)
     custom_tags_dropped = custom_tags_dropped_invalid + custom_tags_dropped_over_cap
+    custom_tags_total = custom_tags_accepted + custom_tags_dropped
+    custom_tags_drop_rate = 0.0 if custom_tags_total == 0 else float(custom_tags_dropped) / float(custom_tags_total)
     tags["backend"] = _normalize_probe_backend(probe.backend)
     tags["ok"] = "true" if probe.ok else "false"
     tags["check_mode"] = _normalize_probe_check_mode(probe.check_mode)
@@ -383,6 +385,7 @@ def emit_notifier_slo_probe_metrics(
     metric_fn("notifier.state_probe.failure", 0.0 if probe.ok else 1.0, dict(tags))
     metric_fn("notifier.state_probe.custom_tags_accepted", float(custom_tags_accepted), dict(tags))
     metric_fn("notifier.state_probe.custom_tags_dropped", float(custom_tags_dropped), dict(tags))
+    metric_fn("notifier.state_probe.custom_tags_drop_rate", custom_tags_drop_rate, dict(tags))
     metric_fn("notifier.state_probe.custom_tags_dropped_invalid", float(custom_tags_dropped_invalid), dict(tags))
     metric_fn("notifier.state_probe.custom_tags_dropped_over_cap", float(custom_tags_dropped_over_cap), dict(tags))
 
