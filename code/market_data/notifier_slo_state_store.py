@@ -27,6 +27,7 @@ class NotifierSLOStateStoreProbeResult:
     detail: str
     latency_ms: float
     error_class: str | None = None
+    check_mode: str = "read"
 
 
 def _classify_probe_error(detail: str) -> str | None:
@@ -243,6 +244,7 @@ def probe_notifier_slo_state_store_connectivity(
 ) -> NotifierSLOStateStoreProbeResult:
     clock = now_fn or time.perf_counter
     started = clock()
+    check_mode = "read_write" if write_check else "read"
 
     def _result(
         backend: str,
@@ -259,6 +261,7 @@ def probe_notifier_slo_state_store_connectivity(
                 detail=f"{backend} connectivity probe exceeded timeout budget",
                 latency_ms=latency_ms,
                 error_class="timeout",
+                check_mode=check_mode,
             )
         return NotifierSLOStateStoreProbeResult(
             backend=backend,
@@ -266,6 +269,7 @@ def probe_notifier_slo_state_store_connectivity(
             detail=detail,
             latency_ms=latency_ms,
             error_class=error_class,
+            check_mode=check_mode,
         )
 
     try:
@@ -331,6 +335,7 @@ def emit_notifier_slo_probe_metrics(
     tags = {} if metric_tags is None else dict(metric_tags)
     tags["backend"] = _normalize_probe_backend(probe.backend)
     tags["ok"] = "true" if probe.ok else "false"
+    tags["check_mode"] = probe.check_mode
     if not probe.ok:
         error_class = _normalize_probe_error_class(probe.error_class)
         if error_class is None:

@@ -56,6 +56,7 @@
 - Non-whitelisted `error_class` inputs are normalized to `other` before metric emission.
 - Each probe metric emission uses an isolated tag snapshot to avoid callback mutation bleed-through.
 - Probe metric `backend` tag is normalized to `sqlite|redis|other`.
+- Probe metrics include `check_mode=read|read_write` to distinguish read-only vs write-path probes.
 
 ## Tests
 

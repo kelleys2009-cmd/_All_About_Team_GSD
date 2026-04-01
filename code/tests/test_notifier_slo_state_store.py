@@ -70,7 +70,13 @@ class NotifierSLOStateStoreTests(unittest.TestCase):
             (
                 "notifier.state_probe.latency_ms",
                 123.4,
-                {"service": "ingestion", "backend": "redis", "ok": "false", "error_class": "runtime"},
+                {
+                    "service": "ingestion",
+                    "backend": "redis",
+                    "ok": "false",
+                    "error_class": "runtime",
+                    "check_mode": "read",
+                },
             ),
             metrics,
         )
@@ -78,7 +84,13 @@ class NotifierSLOStateStoreTests(unittest.TestCase):
             (
                 "notifier.state_probe.failure",
                 1.0,
-                {"service": "ingestion", "backend": "redis", "ok": "false", "error_class": "runtime"},
+                {
+                    "service": "ingestion",
+                    "backend": "redis",
+                    "ok": "false",
+                    "error_class": "runtime",
+                    "check_mode": "read",
+                },
             ),
             metrics,
         )
@@ -99,7 +111,13 @@ class NotifierSLOStateStoreTests(unittest.TestCase):
             (
                 "notifier.state_probe.failure",
                 1.0,
-                {"service": "ingestion", "backend": "redis", "ok": "false", "error_class": "timeout"},
+                {
+                    "service": "ingestion",
+                    "backend": "redis",
+                    "ok": "false",
+                    "error_class": "timeout",
+                    "check_mode": "read",
+                },
             ),
             metrics,
         )
@@ -121,7 +139,13 @@ class NotifierSLOStateStoreTests(unittest.TestCase):
             (
                 "notifier.state_probe.failure",
                 1.0,
-                {"service": "ingestion", "backend": "redis", "ok": "false", "error_class": "other"},
+                {
+                    "service": "ingestion",
+                    "backend": "redis",
+                    "ok": "false",
+                    "error_class": "other",
+                    "check_mode": "read",
+                },
             ),
             metrics,
         )
@@ -149,6 +173,7 @@ class NotifierSLOStateStoreTests(unittest.TestCase):
             self.assertEqual(tags["backend"], "redis")
             self.assertEqual(tags["ok"], "false")
             self.assertEqual(tags["error_class"], "runtime")
+            self.assertEqual(tags["check_mode"], "read")
             self.assertEqual(tags["injected"], "yes")
 
     def test_emit_probe_metrics_normalizes_backend_tag(self) -> None:
@@ -168,7 +193,13 @@ class NotifierSLOStateStoreTests(unittest.TestCase):
             (
                 "notifier.state_probe.failure",
                 1.0,
-                {"service": "ingestion", "backend": "other", "ok": "false", "error_class": "runtime"},
+                {
+                    "service": "ingestion",
+                    "backend": "other",
+                    "ok": "false",
+                    "error_class": "runtime",
+                    "check_mode": "read",
+                },
             ),
             metrics,
         )
@@ -180,16 +211,19 @@ class NotifierSLOStateStoreTests(unittest.TestCase):
             self.assertIsInstance(sqlite_probe, NotifierSLOStateStoreProbeResult)
             self.assertTrue(sqlite_probe.ok)
             self.assertEqual(sqlite_probe.backend, "sqlite")
+            self.assertEqual(sqlite_probe.check_mode, "read")
             self.assertGreaterEqual(sqlite_probe.latency_ms, 0.0)
 
         redis_store = RedisNotifierSLOStateStore(_FakeRedis(), key="test:notifier")
         redis_probe = probe_notifier_slo_state_store_connectivity(redis_store)
         self.assertTrue(redis_probe.ok)
         self.assertEqual(redis_probe.backend, "redis")
+        self.assertEqual(redis_probe.check_mode, "read")
         self.assertGreaterEqual(redis_probe.latency_ms, 0.0)
         redis_write_probe = probe_notifier_slo_state_store_connectivity(redis_store, write_check=True)
         self.assertTrue(redis_write_probe.ok)
         self.assertIn("read/write", redis_write_probe.detail)
+        self.assertEqual(redis_write_probe.check_mode, "read_write")
 
     def test_probe_connectivity_redis_write_check_missing_methods(self) -> None:
         class _ReadOnlyRedis(_FakeRedis):
@@ -202,6 +236,7 @@ class NotifierSLOStateStoreTests(unittest.TestCase):
         self.assertFalse(probe.ok)
         self.assertIn("RuntimeError", probe.detail)
         self.assertEqual(probe.error_class, "runtime")
+        self.assertEqual(probe.check_mode, "read_write")
 
     def test_probe_timeout_budget(self) -> None:
         times = [100.0, 100.5]
@@ -214,6 +249,7 @@ class NotifierSLOStateStoreTests(unittest.TestCase):
         self.assertFalse(probe.ok)
         self.assertIn("timeout budget", probe.detail)
         self.assertEqual(probe.error_class, "timeout")
+        self.assertEqual(probe.check_mode, "read")
 
     def test_probe_connectivity_redis_failure(self) -> None:
         class _BrokenRedis(_FakeRedis):
@@ -225,6 +261,7 @@ class NotifierSLOStateStoreTests(unittest.TestCase):
         self.assertFalse(probe.ok)
         self.assertIn("RuntimeError", probe.detail)
         self.assertEqual(probe.error_class, "runtime")
+        self.assertEqual(probe.check_mode, "read")
 
     def test_build_debug_snapshot_combines_validation_and_redaction(self) -> None:
         snapshot = build_notifier_slo_state_env_debug_snapshot(
