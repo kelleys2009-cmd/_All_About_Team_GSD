@@ -75,6 +75,13 @@ def _normalize_probe_error_class(value: str | None) -> str | None:
     return "other"
 
 
+def _normalize_probe_backend(value: str) -> str:
+    normalized = value.strip().lower()
+    if normalized in {"sqlite", "redis"}:
+        return normalized
+    return "other"
+
+
 def validate_notifier_slo_state_env(
     env: dict[str, str],
 ) -> list[str]:
@@ -322,7 +329,7 @@ def emit_notifier_slo_probe_metrics(
     if metric_fn is None:
         return
     tags = {} if metric_tags is None else dict(metric_tags)
-    tags["backend"] = probe.backend
+    tags["backend"] = _normalize_probe_backend(probe.backend)
     tags["ok"] = "true" if probe.ok else "false"
     if not probe.ok:
         error_class = _normalize_probe_error_class(probe.error_class)
