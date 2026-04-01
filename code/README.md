@@ -59,6 +59,7 @@
 - Probe metrics include `check_mode=read|read_write` to distinguish read-only vs write-path probes.
 - Non-whitelisted `check_mode` inputs are normalized to `other` before metric emission.
 - Caller-provided metric tags are sanitized to string keys/values and empty keys are dropped.
+- Caller-provided metric tags with `None` values are dropped during sanitization.
 
 ## Tests
 

@@ -98,6 +98,8 @@ def _sanitize_metric_tags(metric_tags: dict[str, object] | None) -> dict[str, st
         key_str = str(key).strip()
         if not key_str:
             continue
+        if value is None:
+            continue
         sanitized[key_str] = str(value)
     return sanitized
 

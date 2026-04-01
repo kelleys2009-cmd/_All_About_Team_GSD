@@ -244,7 +244,7 @@ class NotifierSLOStateStoreTests(unittest.TestCase):
                 error_class="runtime",
             ),
             metric_fn=lambda name, value, tags: metrics.append((name, value, tags)),
-            metric_tags={"service": "ingestion", "attempt": 3, "": "ignored", "enabled": True},  # type: ignore[arg-type]
+            metric_tags={"service": "ingestion", "attempt": 3, "": "ignored", "enabled": True, "optional": None},  # type: ignore[arg-type]
         )
         self.assertIn(
             (
@@ -262,6 +262,8 @@ class NotifierSLOStateStoreTests(unittest.TestCase):
             ),
             metrics,
         )
+        for _, _, tags in metrics:
+            self.assertNotIn("optional", tags)
 
     def test_probe_connectivity_sqlite_and_redis(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
