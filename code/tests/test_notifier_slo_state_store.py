@@ -185,7 +185,7 @@ class NotifierSLOStateStoreTests(unittest.TestCase):
             metric_fn=mutating_metric_fn,
             metric_tags={"service": "ingestion"},
         )
-        self.assertEqual(len(seen), 4)
+        self.assertEqual(len(seen), 6)
         for _, _, tags in seen:
             self.assertEqual(tags["backend"], "redis")
             self.assertEqual(tags["ok"], "false")
@@ -297,6 +297,38 @@ class NotifierSLOStateStoreTests(unittest.TestCase):
             ),
             metrics,
         )
+        self.assertIn(
+            (
+                "notifier.state_probe.custom_tags_dropped_invalid",
+                2.0,
+                {
+                    "service": "ingestion",
+                    "attempt": "3",
+                    "enabled": "True",
+                    "backend": "redis",
+                    "ok": "false",
+                    "error_class": "runtime",
+                    "check_mode": "read",
+                },
+            ),
+            metrics,
+        )
+        self.assertIn(
+            (
+                "notifier.state_probe.custom_tags_dropped_over_cap",
+                0.0,
+                {
+                    "service": "ingestion",
+                    "attempt": "3",
+                    "enabled": "True",
+                    "backend": "redis",
+                    "ok": "false",
+                    "error_class": "runtime",
+                    "check_mode": "read",
+                },
+            ),
+            metrics,
+        )
 
     def test_emit_probe_metrics_truncates_long_tag_key_and_value(self) -> None:
         metrics: list[tuple[str, float, dict[str, str]]] = []
@@ -339,6 +371,34 @@ class NotifierSLOStateStoreTests(unittest.TestCase):
         self.assertIn(
             (
                 "notifier.state_probe.custom_tags_dropped",
+                5.0,
+                {
+                    **{f"k{i}": f"v{i}" for i in range(PROBE_METRIC_MAX_CUSTOM_TAGS)},
+                    "backend": "redis",
+                    "ok": "false",
+                    "error_class": "runtime",
+                    "check_mode": "read",
+                },
+            ),
+            metrics,
+        )
+        self.assertIn(
+            (
+                "notifier.state_probe.custom_tags_dropped_invalid",
+                0.0,
+                {
+                    **{f"k{i}": f"v{i}" for i in range(PROBE_METRIC_MAX_CUSTOM_TAGS)},
+                    "backend": "redis",
+                    "ok": "false",
+                    "error_class": "runtime",
+                    "check_mode": "read",
+                },
+            ),
+            metrics,
+        )
+        self.assertIn(
+            (
+                "notifier.state_probe.custom_tags_dropped_over_cap",
                 5.0,
                 {
                     **{f"k{i}": f"v{i}" for i in range(PROBE_METRIC_MAX_CUSTOM_TAGS)},
