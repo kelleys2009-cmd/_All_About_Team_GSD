@@ -132,6 +132,7 @@ class NotifierSLOStateStoreTests(unittest.TestCase):
         probe = probe_notifier_slo_state_store_connectivity(redis_store, write_check=True)
         self.assertFalse(probe.ok)
         self.assertIn("RuntimeError", probe.detail)
+        self.assertEqual(probe.error_class, "runtime")
 
     def test_probe_timeout_budget(self) -> None:
         times = [100.0, 100.5]
@@ -143,6 +144,7 @@ class NotifierSLOStateStoreTests(unittest.TestCase):
         probe = probe_notifier_slo_state_store_connectivity(store, timeout_ms=100.0, now_fn=fake_now)
         self.assertFalse(probe.ok)
         self.assertIn("timeout budget", probe.detail)
+        self.assertEqual(probe.error_class, "timeout")
 
     def test_probe_connectivity_redis_failure(self) -> None:
         class _BrokenRedis(_FakeRedis):
@@ -153,6 +155,7 @@ class NotifierSLOStateStoreTests(unittest.TestCase):
         probe = probe_notifier_slo_state_store_connectivity(redis_store)
         self.assertFalse(probe.ok)
         self.assertIn("RuntimeError", probe.detail)
+        self.assertEqual(probe.error_class, "runtime")
 
     def test_build_debug_snapshot_combines_validation_and_redaction(self) -> None:
         snapshot = build_notifier_slo_state_env_debug_snapshot(

@@ -26,6 +26,7 @@ class NotifierSLOStateStoreProbeResult:
     ok: bool
     detail: str
     latency_ms: float
+    error_class: str | None = None
 
 
 def _classify_probe_error(detail: str) -> str | None:
@@ -47,6 +48,19 @@ def _classify_probe_error(detail: str) -> str | None:
             return "runtime"
         return "other"
     return None
+
+
+def _classify_probe_exception(exc: Exception) -> str:
+    token = exc.__class__.__name__.lower()
+    if "timeout" in token:
+        return "timeout"
+    if "connection" in token or "socket" in token or "network" in token:
+        return "connection"
+    if "auth" in token or "permission" in token or "credential" in token:
+        return "auth"
+    if "value" in token or "type" in token or "runtime" in token:
+        return "runtime"
+    return "other"
 
 
 def validate_notifier_slo_state_env(
@@ -211,7 +225,13 @@ def probe_notifier_slo_state_store_connectivity(
     clock = now_fn or time.perf_counter
     started = clock()
 
-    def _result(backend: str, ok: bool, detail: str) -> NotifierSLOStateStoreProbeResult:
+    def _result(
+        backend: str,
+        ok: bool,
+        detail: str,
+        *,
+        error_class: str | None = None,
+    ) -> NotifierSLOStateStoreProbeResult:
         latency_ms = (clock() - started) * 1000.0
         if timeout_ms is not None and latency_ms > timeout_ms:
             return NotifierSLOStateStoreProbeResult(
@@ -219,12 +239,14 @@ def probe_notifier_slo_state_store_connectivity(
                 ok=False,
                 detail=f"{backend} connectivity probe exceeded timeout budget",
                 latency_ms=latency_ms,
+                error_class="timeout",
             )
         return NotifierSLOStateStoreProbeResult(
             backend=backend,
             ok=ok,
             detail=detail,
             latency_ms=latency_ms,
+            error_class=error_class,
         )
 
     try:
@@ -275,6 +297,7 @@ def probe_notifier_slo_state_store_connectivity(
             backend=backend,
             ok=False,
             detail=f"{backend} connectivity probe failed: {exc.__class__.__name__}",
+            error_class=_classify_probe_exception(exc),
         )
 
 
@@ -290,7 +313,7 @@ def emit_notifier_slo_probe_metrics(
     tags["backend"] = probe.backend
     tags["ok"] = "true" if probe.ok else "false"
     if not probe.ok:
-        error_class = _classify_probe_error(probe.detail)
+        error_class = probe.error_class or _classify_probe_error(probe.detail)
         if error_class is not None:
             tags["error_class"] = error_class
     metric_fn("notifier.state_probe.latency_ms", probe.latency_ms, tags)

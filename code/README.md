@@ -50,6 +50,7 @@
 - Includes runtime connectivity probe helper for SQLite/Redis backend diagnostics.
 - Probe helper supports optional write-path checks (`write_check=True`).
 - Probe helper returns `latency_ms` and supports timeout budgets (`timeout_ms`).
+- Probe helper includes structured failure `error_class` (`timeout|connection|auth|runtime|other`) on unsuccessful probes.
 - Includes probe metric emitter helper for latency/success/failure counters.
 - Probe metric tags include a bounded `error_class` on failures (`timeout|connection|auth|runtime|other`).
 
