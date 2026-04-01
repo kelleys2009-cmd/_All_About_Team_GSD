@@ -63,6 +63,18 @@ def _classify_probe_exception(exc: Exception) -> str:
     return "other"
 
 
+def _normalize_probe_error_class(value: str | None) -> str | None:
+    allowed = {"timeout", "connection", "auth", "runtime", "other"}
+    if value is None:
+        return None
+    normalized = value.strip().lower()
+    if not normalized:
+        return None
+    if normalized in allowed:
+        return normalized
+    return "other"
+
+
 def validate_notifier_slo_state_env(
     env: dict[str, str],
 ) -> list[str]:
@@ -313,7 +325,9 @@ def emit_notifier_slo_probe_metrics(
     tags["backend"] = probe.backend
     tags["ok"] = "true" if probe.ok else "false"
     if not probe.ok:
-        error_class = probe.error_class or _classify_probe_error(probe.detail)
+        error_class = _normalize_probe_error_class(probe.error_class)
+        if error_class is None:
+            error_class = _normalize_probe_error_class(_classify_probe_error(probe.detail))
         if error_class is not None:
             tags["error_class"] = error_class
     metric_fn("notifier.state_probe.latency_ms", probe.latency_ms, tags)

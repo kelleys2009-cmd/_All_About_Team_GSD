@@ -53,6 +53,7 @@
 - Probe helper includes structured failure `error_class` (`timeout|connection|auth|runtime|other`) on unsuccessful probes.
 - Includes probe metric emitter helper for latency/success/failure counters.
 - Probe metric tags include a bounded `error_class` on failures (`timeout|connection|auth|runtime|other`).
+- Non-whitelisted `error_class` inputs are normalized to `other` before metric emission.
 
 ## Tests
 

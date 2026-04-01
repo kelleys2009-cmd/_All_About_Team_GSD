@@ -104,6 +104,28 @@ class NotifierSLOStateStoreTests(unittest.TestCase):
             metrics,
         )
 
+    def test_emit_probe_metrics_normalizes_unbounded_error_class(self) -> None:
+        metrics: list[tuple[str, float, dict[str, str]]] = []
+        emit_notifier_slo_probe_metrics(
+            NotifierSLOStateStoreProbeResult(
+                backend="redis",
+                ok=False,
+                detail="redis connectivity probe failed: CustomExplosiveError",
+                latency_ms=10.0,
+                error_class="CustomExplosiveError",
+            ),
+            metric_fn=lambda name, value, tags: metrics.append((name, value, tags)),
+            metric_tags={"service": "ingestion"},
+        )
+        self.assertIn(
+            (
+                "notifier.state_probe.failure",
+                1.0,
+                {"service": "ingestion", "backend": "redis", "ok": "false", "error_class": "other"},
+            ),
+            metrics,
+        )
+
     def test_probe_connectivity_sqlite_and_redis(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             sqlite_store = SqliteNotifierSLOStateStore(Path(tmp) / "notifier_slo_state.db")
