@@ -367,6 +367,7 @@ def emit_notifier_slo_probe_metrics(
     if metric_fn is None:
         return
     tags, custom_tags_dropped_invalid, custom_tags_dropped_over_cap = _sanitize_metric_tags(metric_tags)
+    custom_tags_accepted = len(tags)
     custom_tags_dropped = custom_tags_dropped_invalid + custom_tags_dropped_over_cap
     tags["backend"] = _normalize_probe_backend(probe.backend)
     tags["ok"] = "true" if probe.ok else "false"
@@ -380,6 +381,7 @@ def emit_notifier_slo_probe_metrics(
     metric_fn("notifier.state_probe.latency_ms", probe.latency_ms, dict(tags))
     metric_fn("notifier.state_probe.success", 1.0 if probe.ok else 0.0, dict(tags))
     metric_fn("notifier.state_probe.failure", 0.0 if probe.ok else 1.0, dict(tags))
+    metric_fn("notifier.state_probe.custom_tags_accepted", float(custom_tags_accepted), dict(tags))
     metric_fn("notifier.state_probe.custom_tags_dropped", float(custom_tags_dropped), dict(tags))
     metric_fn("notifier.state_probe.custom_tags_dropped_invalid", float(custom_tags_dropped_invalid), dict(tags))
     metric_fn("notifier.state_probe.custom_tags_dropped_over_cap", float(custom_tags_dropped_over_cap), dict(tags))
