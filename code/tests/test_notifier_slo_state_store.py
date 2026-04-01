@@ -14,6 +14,7 @@ from market_data.notifier_slo_state_store import (
     build_notifier_slo_state_env_debug_snapshot,
     create_notifier_slo_state_store_from_env,
     dedupe_notifier_slo_alerts_with_store,
+    emit_notifier_slo_probe_metrics,
     probe_notifier_slo_state_store_connectivity,
     redact_notifier_slo_state_env,
     validate_notifier_slo_state_env,
@@ -53,6 +54,27 @@ class _FakeRedis:
 
 
 class NotifierSLOStateStoreTests(unittest.TestCase):
+    def test_emit_probe_metrics(self) -> None:
+        metrics: list[tuple[str, float, dict[str, str]]] = []
+        emit_notifier_slo_probe_metrics(
+            NotifierSLOStateStoreProbeResult(
+                backend="redis",
+                ok=False,
+                detail="redis connectivity probe failed: RuntimeError",
+                latency_ms=123.4,
+            ),
+            metric_fn=lambda name, value, tags: metrics.append((name, value, tags)),
+            metric_tags={"service": "ingestion"},
+        )
+        self.assertIn(
+            ("notifier.state_probe.latency_ms", 123.4, {"service": "ingestion", "backend": "redis", "ok": "false"}),
+            metrics,
+        )
+        self.assertIn(
+            ("notifier.state_probe.failure", 1.0, {"service": "ingestion", "backend": "redis", "ok": "false"}),
+            metrics,
+        )
+
     def test_probe_connectivity_sqlite_and_redis(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             sqlite_store = SqliteNotifierSLOStateStore(Path(tmp) / "notifier_slo_state.db")

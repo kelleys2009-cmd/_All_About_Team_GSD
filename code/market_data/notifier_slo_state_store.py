@@ -257,6 +257,22 @@ def probe_notifier_slo_state_store_connectivity(
         )
 
 
+def emit_notifier_slo_probe_metrics(
+    probe: NotifierSLOStateStoreProbeResult,
+    *,
+    metric_fn: Callable[[str, float, dict[str, str]], None] | None,
+    metric_tags: dict[str, str] | None = None,
+) -> None:
+    if metric_fn is None:
+        return
+    tags = {} if metric_tags is None else dict(metric_tags)
+    tags["backend"] = probe.backend
+    tags["ok"] = "true" if probe.ok else "false"
+    metric_fn("notifier.state_probe.latency_ms", probe.latency_ms, tags)
+    metric_fn("notifier.state_probe.success", 1.0 if probe.ok else 0.0, tags)
+    metric_fn("notifier.state_probe.failure", 0.0 if probe.ok else 1.0, tags)
+
+
 def create_notifier_slo_state_store_from_env(
     *,
     env: dict[str, str] | None = None,
