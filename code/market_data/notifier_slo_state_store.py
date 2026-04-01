@@ -28,6 +28,27 @@ class NotifierSLOStateStoreProbeResult:
     latency_ms: float
 
 
+def _classify_probe_error(detail: str) -> str | None:
+    lowered = detail.strip().lower()
+    if not lowered:
+        return None
+    if "timeout budget" in lowered:
+        return "timeout"
+    if "failed:" in lowered:
+        raw_class = detail.split("failed:", 1)[1].strip().split()[0]
+        token = raw_class.replace("Error", "").replace("Exception", "").strip().lower()
+        if "timeout" in token:
+            return "timeout"
+        if "connection" in token or "socket" in token or "network" in token:
+            return "connection"
+        if "auth" in token or "permission" in token or "credential" in token:
+            return "auth"
+        if "value" in token or "type" in token or "runtime" in token:
+            return "runtime"
+        return "other"
+    return None
+
+
 def validate_notifier_slo_state_env(
     env: dict[str, str],
 ) -> list[str]:
@@ -268,6 +289,10 @@ def emit_notifier_slo_probe_metrics(
     tags = {} if metric_tags is None else dict(metric_tags)
     tags["backend"] = probe.backend
     tags["ok"] = "true" if probe.ok else "false"
+    if not probe.ok:
+        error_class = _classify_probe_error(probe.detail)
+        if error_class is not None:
+            tags["error_class"] = error_class
     metric_fn("notifier.state_probe.latency_ms", probe.latency_ms, tags)
     metric_fn("notifier.state_probe.success", 1.0 if probe.ok else 0.0, tags)
     metric_fn("notifier.state_probe.failure", 0.0 if probe.ok else 1.0, tags)

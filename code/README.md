@@ -51,6 +51,7 @@
 - Probe helper supports optional write-path checks (`write_check=True`).
 - Probe helper returns `latency_ms` and supports timeout budgets (`timeout_ms`).
 - Includes probe metric emitter helper for latency/success/failure counters.
+- Probe metric tags include a bounded `error_class` on failures (`timeout|connection|auth|runtime|other`).
 
 ## Tests
 

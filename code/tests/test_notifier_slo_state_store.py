@@ -67,11 +67,40 @@ class NotifierSLOStateStoreTests(unittest.TestCase):
             metric_tags={"service": "ingestion"},
         )
         self.assertIn(
-            ("notifier.state_probe.latency_ms", 123.4, {"service": "ingestion", "backend": "redis", "ok": "false"}),
+            (
+                "notifier.state_probe.latency_ms",
+                123.4,
+                {"service": "ingestion", "backend": "redis", "ok": "false", "error_class": "runtime"},
+            ),
             metrics,
         )
         self.assertIn(
-            ("notifier.state_probe.failure", 1.0, {"service": "ingestion", "backend": "redis", "ok": "false"}),
+            (
+                "notifier.state_probe.failure",
+                1.0,
+                {"service": "ingestion", "backend": "redis", "ok": "false", "error_class": "runtime"},
+            ),
+            metrics,
+        )
+
+    def test_emit_probe_metrics_timeout_error_class(self) -> None:
+        metrics: list[tuple[str, float, dict[str, str]]] = []
+        emit_notifier_slo_probe_metrics(
+            NotifierSLOStateStoreProbeResult(
+                backend="redis",
+                ok=False,
+                detail="redis connectivity probe exceeded timeout budget",
+                latency_ms=90.5,
+            ),
+            metric_fn=lambda name, value, tags: metrics.append((name, value, tags)),
+            metric_tags={"service": "ingestion"},
+        )
+        self.assertIn(
+            (
+                "notifier.state_probe.failure",
+                1.0,
+                {"service": "ingestion", "backend": "redis", "ok": "false", "error_class": "timeout"},
+            ),
             metrics,
         )
 
