@@ -330,9 +330,9 @@ def emit_notifier_slo_probe_metrics(
             error_class = _normalize_probe_error_class(_classify_probe_error(probe.detail))
         if error_class is not None:
             tags["error_class"] = error_class
-    metric_fn("notifier.state_probe.latency_ms", probe.latency_ms, tags)
-    metric_fn("notifier.state_probe.success", 1.0 if probe.ok else 0.0, tags)
-    metric_fn("notifier.state_probe.failure", 0.0 if probe.ok else 1.0, tags)
+    metric_fn("notifier.state_probe.latency_ms", probe.latency_ms, dict(tags))
+    metric_fn("notifier.state_probe.success", 1.0 if probe.ok else 0.0, dict(tags))
+    metric_fn("notifier.state_probe.failure", 0.0 if probe.ok else 1.0, dict(tags))
 
 
 def create_notifier_slo_state_store_from_env(

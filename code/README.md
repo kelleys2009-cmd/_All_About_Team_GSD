@@ -54,6 +54,7 @@
 - Includes probe metric emitter helper for latency/success/failure counters.
 - Probe metric tags include a bounded `error_class` on failures (`timeout|connection|auth|runtime|other`).
 - Non-whitelisted `error_class` inputs are normalized to `other` before metric emission.
+- Each probe metric emission uses an isolated tag snapshot to avoid callback mutation bleed-through.
 
 ## Tests
 

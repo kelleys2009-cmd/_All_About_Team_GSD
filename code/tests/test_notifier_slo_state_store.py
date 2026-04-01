@@ -126,6 +126,31 @@ class NotifierSLOStateStoreTests(unittest.TestCase):
             metrics,
         )
 
+    def test_emit_probe_metrics_uses_immutable_tag_snapshots(self) -> None:
+        seen: list[tuple[str, float, dict[str, str]]] = []
+
+        def mutating_metric_fn(name: str, value: float, tags: dict[str, str]) -> None:
+            tags["injected"] = "yes"
+            seen.append((name, value, tags))
+
+        emit_notifier_slo_probe_metrics(
+            NotifierSLOStateStoreProbeResult(
+                backend="redis",
+                ok=False,
+                detail="redis connectivity probe failed: RuntimeError",
+                latency_ms=5.0,
+                error_class="runtime",
+            ),
+            metric_fn=mutating_metric_fn,
+            metric_tags={"service": "ingestion"},
+        )
+        self.assertEqual(len(seen), 3)
+        for _, _, tags in seen:
+            self.assertEqual(tags["backend"], "redis")
+            self.assertEqual(tags["ok"], "false")
+            self.assertEqual(tags["error_class"], "runtime")
+            self.assertEqual(tags["injected"], "yes")
+
     def test_probe_connectivity_sqlite_and_redis(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             sqlite_store = SqliteNotifierSLOStateStore(Path(tmp) / "notifier_slo_state.db")
