@@ -85,12 +85,15 @@
 - Integrates risk gating via `PreTradeRiskEngine`.
 - Emits structured metric/event hooks for acceptance, duplicates, and risk rejections.
 - Includes exchange lifecycle transitions (`pending_submit -> open -> canceled`) and submit-failure handling.
+- Includes partial/full fill transitions with slippage and ack-latency metrics.
+- Includes cancel-replace helper workflow (`replace_order`) for open orders.
 
 `trading/order_store.py`
 - SQLite-backed OMS order persistence keyed by `client_order_id`.
 - Supports deterministic upsert/get semantics for idempotent order admission.
 - Includes schema bootstrap helper for local runtime bring-up.
 - Includes `order_id` lookup and exchange-order-id persistence for lifecycle workflows.
+- Persists fill-state fields (`filled_quantity`, `avg_fill_price`) with backward-compatible migration.
 
 ## Tests
 

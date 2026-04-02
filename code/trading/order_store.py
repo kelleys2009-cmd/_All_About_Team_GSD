@@ -29,7 +29,9 @@ class SQLiteOrderStore:
               timestamp_ms,
               status,
               risk_violations_json,
-              exchange_order_id
+              exchange_order_id,
+              filled_quantity,
+              avg_fill_price
             FROM oms_orders
             WHERE client_order_id = ?
             """,
@@ -50,7 +52,9 @@ class SQLiteOrderStore:
               timestamp_ms,
               status,
               risk_violations_json,
-              exchange_order_id
+              exchange_order_id,
+              filled_quantity,
+              avg_fill_price
             FROM oms_orders
             WHERE order_id = ?
             """,
@@ -72,8 +76,10 @@ class SQLiteOrderStore:
                   timestamp_ms,
                   status,
                   risk_violations_json,
-                  exchange_order_id
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                  exchange_order_id,
+                  filled_quantity,
+                  avg_fill_price
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(client_order_id) DO UPDATE SET
                   order_id=excluded.order_id,
                   symbol=excluded.symbol,
@@ -83,7 +89,9 @@ class SQLiteOrderStore:
                   timestamp_ms=excluded.timestamp_ms,
                   status=excluded.status,
                   risk_violations_json=excluded.risk_violations_json,
-                  exchange_order_id=excluded.exchange_order_id
+                  exchange_order_id=excluded.exchange_order_id,
+                  filled_quantity=excluded.filled_quantity,
+                  avg_fill_price=excluded.avg_fill_price
                 """,
                 (
                     record.order_id,
@@ -96,6 +104,8 @@ class SQLiteOrderStore:
                     record.status,
                     json.dumps(record.risk_violations, sort_keys=True),
                     record.exchange_order_id,
+                    record.filled_quantity,
+                    record.avg_fill_price,
                 ),
             )
             conn.commit()
@@ -120,6 +130,8 @@ class SQLiteOrderStore:
             status=row["status"],
             risk_violations=list(json.loads(row["risk_violations_json"])),
             exchange_order_id=row["exchange_order_id"],
+            filled_quantity=float(row["filled_quantity"]),
+            avg_fill_price=(float(row["avg_fill_price"]) if row["avg_fill_price"] is not None else None),
         )
 
     def _ensure_schema(self) -> None:
@@ -136,14 +148,19 @@ class SQLiteOrderStore:
                   timestamp_ms INTEGER NOT NULL,
                   status TEXT NOT NULL,
                   risk_violations_json TEXT NOT NULL,
-                  exchange_order_id TEXT
+                  exchange_order_id TEXT,
+                  filled_quantity REAL NOT NULL DEFAULT 0,
+                  avg_fill_price REAL
                 )
                 """
             )
-            # Backward-compatible migration for older local schemas.
             columns = {
                 row[1] for row in conn.execute("PRAGMA table_info(oms_orders)").fetchall()
             }
             if "exchange_order_id" not in columns:
                 conn.execute("ALTER TABLE oms_orders ADD COLUMN exchange_order_id TEXT")
+            if "filled_quantity" not in columns:
+                conn.execute("ALTER TABLE oms_orders ADD COLUMN filled_quantity REAL NOT NULL DEFAULT 0")
+            if "avg_fill_price" not in columns:
+                conn.execute("ALTER TABLE oms_orders ADD COLUMN avg_fill_price REAL")
             conn.commit()

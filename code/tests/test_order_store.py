@@ -22,6 +22,8 @@ class SQLiteOrderStoreTests(unittest.TestCase):
                 status="pending_submit",
                 risk_violations=[],
                 exchange_order_id="ex-ord-1",
+                filled_quantity=0.1,
+                avg_fill_price=50_005.0,
             )
             store.upsert(record)
 
@@ -32,6 +34,8 @@ class SQLiteOrderStoreTests(unittest.TestCase):
             self.assertEqual(loaded.symbol, "BTC")
             self.assertEqual(loaded.status, "pending_submit")
             self.assertEqual(loaded.exchange_order_id, "ex-ord-1")
+            self.assertAlmostEqual(loaded.filled_quantity, 0.1, places=8)
+            self.assertAlmostEqual(loaded.avg_fill_price or 0.0, 50_005.0, places=8)
 
             by_order_id = store.get_by_order_id("ord-1")
             self.assertIsNotNone(by_order_id)

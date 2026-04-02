@@ -33,6 +33,8 @@ class OrderRecord:
     status: str
     risk_violations: List[str] = field(default_factory=list)
     exchange_order_id: Optional[str] = None
+    filled_quantity: float = 0.0
+    avg_fill_price: Optional[float] = None
 
 
 @dataclass(frozen=True)
@@ -86,7 +88,7 @@ class InMemoryOrderStore:
 
 
 class OrderManagementService:
-    """Risk-gated OMS admission path with idempotent client order IDs."""
+    """Risk-gated OMS admission and lifecycle service."""
 
     def __init__(
         self,
@@ -119,7 +121,7 @@ class OrderManagementService:
                 },
             )
             return OrderSubmitResult(
-                accepted=existing.status in ("pending_submit", "open"),
+                accepted=existing.status in ("pending_submit", "open", "partially_filled"),
                 duplicate=True,
                 order=existing,
                 risk_decision=None,
@@ -236,11 +238,63 @@ class OrderManagementService:
         )
         return LifecycleResult(success=True, order=opened, reason=None)
 
+    def apply_fill(
+        self,
+        order_id: str,
+        fill_quantity: float,
+        fill_price: float,
+        ack_latency_ms: Optional[float] = None,
+    ) -> LifecycleResult:
+        order = self._order_store.get_by_order_id(order_id)
+        if order is None:
+            return LifecycleResult(success=False, order=None, reason="order_not_found")
+        if order.status not in ("open", "partially_filled"):
+            return LifecycleResult(success=False, order=order, reason="order_not_fillable")
+        if fill_quantity <= 0 or fill_price <= 0:
+            return LifecycleResult(success=False, order=order, reason="invalid_fill")
+
+        new_filled = min(order.quantity, order.filled_quantity + fill_quantity)
+        prev_notional = (order.avg_fill_price or 0.0) * order.filled_quantity
+        new_notional = prev_notional + (fill_price * (new_filled - order.filled_quantity))
+        avg_fill = new_notional / new_filled if new_filled > 0 else None
+
+        status = "filled" if new_filled >= order.quantity else "partially_filled"
+        updated = replace(
+            order,
+            filled_quantity=new_filled,
+            avg_fill_price=avg_fill,
+            status=status,
+        )
+        self._order_store.upsert(updated)
+
+        slippage_bps = ((fill_price / order.limit_price) - 1.0) * 10_000.0
+        if order.side.lower() == "sell":
+            slippage_bps = -slippage_bps
+
+        self._emit_metric("oms.order.fill_count", 1.0, {"symbol": order.symbol})
+        self._emit_metric("oms.order.fill_slippage_bps", slippage_bps, {"symbol": order.symbol})
+        if ack_latency_ms is not None:
+            self._emit_metric("oms.order.ack_latency_ms", ack_latency_ms, {"symbol": order.symbol})
+        self._emit_event(
+            "order_filled",
+            {
+                "order_id": order.order_id,
+                "filled_quantity": fill_quantity,
+                "filled_total": new_filled,
+                "order_quantity": order.quantity,
+                "status": status,
+                "fill_price": fill_price,
+                "avg_fill_price": avg_fill,
+                "slippage_bps": slippage_bps,
+            },
+        )
+        return LifecycleResult(success=True, order=updated, reason=None)
+
     def cancel_order(self, order_id: str) -> LifecycleResult:
         order = self._order_store.get_by_order_id(order_id)
         if order is None:
             return LifecycleResult(success=False, order=None, reason="order_not_found")
-        if order.status not in ("open", "pending_submit"):
+        if order.status not in ("open", "pending_submit", "partially_filled"):
             return LifecycleResult(success=False, order=order, reason="order_not_cancellable")
         if self._exchange_adapter is None:
             return LifecycleResult(success=False, order=order, reason="exchange_not_configured")
@@ -270,6 +324,43 @@ class OrderManagementService:
             },
         )
         return LifecycleResult(success=True, order=canceled, reason=None)
+
+    def replace_order(
+        self,
+        order_id: str,
+        new_client_order_id: str,
+        new_limit_price: float,
+        new_quantity: float,
+        timestamp_ms: int,
+        account_state: AccountState,
+    ) -> tuple[LifecycleResult, Optional[OrderSubmitResult]]:
+        cancel_result = self.cancel_order(order_id)
+        if not cancel_result.success:
+            return cancel_result, None
+
+        original = cancel_result.order
+        assert original is not None
+        submit_result = self.submit_order(
+            intent=OrderIntent(
+                client_order_id=new_client_order_id,
+                symbol=original.symbol,
+                side=original.side,
+                quantity=new_quantity,
+                limit_price=new_limit_price,
+                timestamp_ms=timestamp_ms,
+            ),
+            account_state=account_state,
+        )
+        self._emit_metric("oms.order.replace_count", 1.0, {"symbol": original.symbol})
+        self._emit_event(
+            "order_replaced",
+            {
+                "old_order_id": order_id,
+                "new_order_id": submit_result.order.order_id,
+                "new_client_order_id": new_client_order_id,
+            },
+        )
+        return cancel_result, submit_result
 
     @staticmethod
     def _new_order_id() -> str:
