@@ -389,6 +389,7 @@ def emit_notifier_slo_probe_metrics(
     metric_fn("notifier.state_probe.latency_ms", probe.latency_ms, dict(tags))
     metric_fn("notifier.state_probe.success", 1.0 if probe.ok else 0.0, dict(tags))
     metric_fn("notifier.state_probe.failure", 0.0 if probe.ok else 1.0, dict(tags))
+    metric_fn("notifier.state_probe.custom_tags_total", float(custom_tags_total), dict(tags))
     metric_fn("notifier.state_probe.custom_tags_accepted", float(custom_tags_accepted), dict(tags))
     metric_fn("notifier.state_probe.custom_tags_dropped", float(custom_tags_dropped), dict(tags))
     metric_fn("notifier.state_probe.custom_tags_drop_rate", custom_tags_drop_rate, dict(tags))
