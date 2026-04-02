@@ -79,6 +79,12 @@
 - Includes expected slippage cap and order-rate limiter checks.
 - Produces explicit violation reasons for auditability and alerting.
 
+`trading/oms.py`
+- Minimal order management service admission path.
+- Enforces idempotent `client_order_id` behavior before exchange submit.
+- Integrates risk gating via `PreTradeRiskEngine`.
+- Emits structured metric/event hooks for acceptance, duplicates, and risk rejections.
+
 ## Tests
 
 ```bash
@@ -90,6 +96,7 @@ PYTHONPATH=. python3 -m unittest tests/test_alert_notifiers.py
 PYTHONPATH=. python3 -m unittest tests/test_notifier_slo_policy.py
 PYTHONPATH=. python3 -m unittest tests/test_notifier_slo_state_store.py
 PYTHONPATH=. python3 -m unittest tests/test_risk_controls.py
+PYTHONPATH=. python3 -m unittest tests/test_oms.py
 ```
 
 Postgres integration harness (runs only when DSN is provided):
