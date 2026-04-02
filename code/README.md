@@ -70,6 +70,15 @@
 - Probe metrics include `notifier.state_probe.custom_tags_total` as accepted+dropped denominator.
 - Probe metrics include `notifier.state_probe.custom_tags_accepted_rate` as accepted/total ratio.
 
+## Trading
+
+`trading/risk_controls.py`
+- Deterministic pre-trade risk guard for OMS order admission.
+- Includes kill-switch, allowed-symbol checks, and max daily realized loss cutoff.
+- Includes per-order notional, per-symbol exposure, total gross notional, and leverage limits.
+- Includes expected slippage cap and order-rate limiter checks.
+- Produces explicit violation reasons for auditability and alerting.
+
 ## Tests
 
 ```bash
@@ -80,6 +89,7 @@ PYTHONPATH=. python3 -m unittest tests/test_ingestion_alerts.py
 PYTHONPATH=. python3 -m unittest tests/test_alert_notifiers.py
 PYTHONPATH=. python3 -m unittest tests/test_notifier_slo_policy.py
 PYTHONPATH=. python3 -m unittest tests/test_notifier_slo_state_store.py
+PYTHONPATH=. python3 -m unittest tests/test_risk_controls.py
 ```
 
 Postgres integration harness (runs only when DSN is provided):
