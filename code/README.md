@@ -84,11 +84,13 @@
 - Enforces idempotent `client_order_id` behavior before exchange submit.
 - Integrates risk gating via `PreTradeRiskEngine`.
 - Emits structured metric/event hooks for acceptance, duplicates, and risk rejections.
+- Includes exchange lifecycle transitions (`pending_submit -> open -> canceled`) and submit-failure handling.
 
 `trading/order_store.py`
 - SQLite-backed OMS order persistence keyed by `client_order_id`.
 - Supports deterministic upsert/get semantics for idempotent order admission.
 - Includes schema bootstrap helper for local runtime bring-up.
+- Includes `order_id` lookup and exchange-order-id persistence for lifecycle workflows.
 
 ## Tests
 

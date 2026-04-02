@@ -17,40 +17,46 @@ class SQLiteOrderStore:
         self._ensure_schema()
 
     def get(self, client_order_id: str) -> Optional[OrderRecord]:
-        with sqlite3.connect(self._db_path) as conn:
-            conn.row_factory = sqlite3.Row
-            row = conn.execute(
-                """
-                SELECT
-                  order_id,
-                  client_order_id,
-                  symbol,
-                  side,
-                  quantity,
-                  limit_price,
-                  timestamp_ms,
-                  status,
-                  risk_violations_json
-                FROM oms_orders
-                WHERE client_order_id = ?
-                """,
-                (client_order_id,),
-            ).fetchone()
-
-        if row is None:
-            return None
-
-        return OrderRecord(
-            order_id=row["order_id"],
-            client_order_id=row["client_order_id"],
-            symbol=row["symbol"],
-            side=row["side"],
-            quantity=float(row["quantity"]),
-            limit_price=float(row["limit_price"]),
-            timestamp_ms=int(row["timestamp_ms"]),
-            status=row["status"],
-            risk_violations=list(json.loads(row["risk_violations_json"])),
+        row = self._fetch_one(
+            """
+            SELECT
+              order_id,
+              client_order_id,
+              symbol,
+              side,
+              quantity,
+              limit_price,
+              timestamp_ms,
+              status,
+              risk_violations_json,
+              exchange_order_id
+            FROM oms_orders
+            WHERE client_order_id = ?
+            """,
+            (client_order_id,),
         )
+        return self._row_to_order(row)
+
+    def get_by_order_id(self, order_id: str) -> Optional[OrderRecord]:
+        row = self._fetch_one(
+            """
+            SELECT
+              order_id,
+              client_order_id,
+              symbol,
+              side,
+              quantity,
+              limit_price,
+              timestamp_ms,
+              status,
+              risk_violations_json,
+              exchange_order_id
+            FROM oms_orders
+            WHERE order_id = ?
+            """,
+            (order_id,),
+        )
+        return self._row_to_order(row)
 
     def upsert(self, record: OrderRecord) -> None:
         with sqlite3.connect(self._db_path) as conn:
@@ -65,8 +71,9 @@ class SQLiteOrderStore:
                   limit_price,
                   timestamp_ms,
                   status,
-                  risk_violations_json
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                  risk_violations_json,
+                  exchange_order_id
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(client_order_id) DO UPDATE SET
                   order_id=excluded.order_id,
                   symbol=excluded.symbol,
@@ -75,7 +82,8 @@ class SQLiteOrderStore:
                   limit_price=excluded.limit_price,
                   timestamp_ms=excluded.timestamp_ms,
                   status=excluded.status,
-                  risk_violations_json=excluded.risk_violations_json
+                  risk_violations_json=excluded.risk_violations_json,
+                  exchange_order_id=excluded.exchange_order_id
                 """,
                 (
                     record.order_id,
@@ -87,9 +95,32 @@ class SQLiteOrderStore:
                     record.timestamp_ms,
                     record.status,
                     json.dumps(record.risk_violations, sort_keys=True),
+                    record.exchange_order_id,
                 ),
             )
             conn.commit()
+
+    def _fetch_one(self, query: str, params: tuple[object, ...]) -> Optional[sqlite3.Row]:
+        with sqlite3.connect(self._db_path) as conn:
+            conn.row_factory = sqlite3.Row
+            return conn.execute(query, params).fetchone()
+
+    @staticmethod
+    def _row_to_order(row: Optional[sqlite3.Row]) -> Optional[OrderRecord]:
+        if row is None:
+            return None
+        return OrderRecord(
+            order_id=row["order_id"],
+            client_order_id=row["client_order_id"],
+            symbol=row["symbol"],
+            side=row["side"],
+            quantity=float(row["quantity"]),
+            limit_price=float(row["limit_price"]),
+            timestamp_ms=int(row["timestamp_ms"]),
+            status=row["status"],
+            risk_violations=list(json.loads(row["risk_violations_json"])),
+            exchange_order_id=row["exchange_order_id"],
+        )
 
     def _ensure_schema(self) -> None:
         with sqlite3.connect(self._db_path) as conn:
@@ -104,8 +135,15 @@ class SQLiteOrderStore:
                   limit_price REAL NOT NULL,
                   timestamp_ms INTEGER NOT NULL,
                   status TEXT NOT NULL,
-                  risk_violations_json TEXT NOT NULL
+                  risk_violations_json TEXT NOT NULL,
+                  exchange_order_id TEXT
                 )
                 """
             )
+            # Backward-compatible migration for older local schemas.
+            columns = {
+                row[1] for row in conn.execute("PRAGMA table_info(oms_orders)").fetchall()
+            }
+            if "exchange_order_id" not in columns:
+                conn.execute("ALTER TABLE oms_orders ADD COLUMN exchange_order_id TEXT")
             conn.commit()

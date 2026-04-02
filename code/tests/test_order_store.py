@@ -21,6 +21,7 @@ class SQLiteOrderStoreTests(unittest.TestCase):
                 timestamp_ms=1_000,
                 status="pending_submit",
                 risk_violations=[],
+                exchange_order_id="ex-ord-1",
             )
             store.upsert(record)
 
@@ -30,6 +31,12 @@ class SQLiteOrderStoreTests(unittest.TestCase):
             self.assertEqual(loaded.order_id, "ord-1")
             self.assertEqual(loaded.symbol, "BTC")
             self.assertEqual(loaded.status, "pending_submit")
+            self.assertEqual(loaded.exchange_order_id, "ex-ord-1")
+
+            by_order_id = store.get_by_order_id("ord-1")
+            self.assertIsNotNone(by_order_id)
+            assert by_order_id is not None
+            self.assertEqual(by_order_id.client_order_id, "client-1")
 
     def test_upsert_overwrites_same_client_order_id(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -44,6 +51,7 @@ class SQLiteOrderStoreTests(unittest.TestCase):
                 timestamp_ms=1_000,
                 status="pending_submit",
                 risk_violations=[],
+                exchange_order_id=None,
             )
             second = OrderRecord(
                 order_id="ord-2",
@@ -55,6 +63,7 @@ class SQLiteOrderStoreTests(unittest.TestCase):
                 timestamp_ms=2_000,
                 status="rejected_risk",
                 risk_violations=["max_daily_loss_exceeded"],
+                exchange_order_id=None,
             )
             store.upsert(first)
             store.upsert(second)
