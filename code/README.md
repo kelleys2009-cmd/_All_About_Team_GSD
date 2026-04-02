@@ -68,6 +68,7 @@
 - Probe metrics include `notifier.state_probe.custom_tags_drop_rate` for drop ratio per emission.
 - Probe metrics include reason-specific drop rates: `..._drop_rate_invalid` and `..._drop_rate_over_cap`.
 - Probe metrics include `notifier.state_probe.custom_tags_total` as accepted+dropped denominator.
+- Probe metrics include `notifier.state_probe.custom_tags_accepted_rate` as accepted/total ratio.
 
 ## Tests
 

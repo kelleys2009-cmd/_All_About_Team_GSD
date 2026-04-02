@@ -185,7 +185,7 @@ class NotifierSLOStateStoreTests(unittest.TestCase):
             metric_fn=mutating_metric_fn,
             metric_tags={"service": "ingestion"},
         )
-        self.assertEqual(len(seen), 11)
+        self.assertEqual(len(seen), 12)
         for _, _, tags in seen:
             self.assertEqual(tags["backend"], "redis")
             self.assertEqual(tags["ok"], "false")
@@ -317,6 +317,22 @@ class NotifierSLOStateStoreTests(unittest.TestCase):
             (
                 "notifier.state_probe.custom_tags_total",
                 5.0,
+                {
+                    "service": "ingestion",
+                    "attempt": "3",
+                    "enabled": "True",
+                    "backend": "redis",
+                    "ok": "false",
+                    "error_class": "runtime",
+                    "check_mode": "read",
+                },
+            ),
+            metrics,
+        )
+        self.assertIn(
+            (
+                "notifier.state_probe.custom_tags_accepted_rate",
+                0.6,
                 {
                     "service": "ingestion",
                     "attempt": "3",
@@ -480,6 +496,20 @@ class NotifierSLOStateStoreTests(unittest.TestCase):
             (
                 "notifier.state_probe.custom_tags_total",
                 17.0,
+                {
+                    **{f"k{i}": f"v{i}" for i in range(PROBE_METRIC_MAX_CUSTOM_TAGS)},
+                    "backend": "redis",
+                    "ok": "false",
+                    "error_class": "runtime",
+                    "check_mode": "read",
+                },
+            ),
+            metrics,
+        )
+        self.assertIn(
+            (
+                "notifier.state_probe.custom_tags_accepted_rate",
+                12.0 / 17.0,
                 {
                     **{f"k{i}": f"v{i}" for i in range(PROBE_METRIC_MAX_CUSTOM_TAGS)},
                     "backend": "redis",
