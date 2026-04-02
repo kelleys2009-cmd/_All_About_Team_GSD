@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import uuid
 from dataclasses import dataclass, field
-from typing import Callable, Dict, List, Optional
+from typing import Callable, Dict, List, Optional, Protocol
 
 from .risk_controls import AccountState, PreTradeRiskEngine, ProposedOrder, RiskDecision
 
@@ -42,6 +42,14 @@ class OrderSubmitResult:
     risk_decision: Optional[RiskDecision] = None
 
 
+class OrderStore(Protocol):
+    def get(self, client_order_id: str) -> Optional[OrderRecord]:
+        ...
+
+    def upsert(self, record: OrderRecord) -> None:
+        ...
+
+
 class InMemoryOrderStore:
     def __init__(self) -> None:
         self._by_client_order_id: Dict[str, OrderRecord] = {}
@@ -59,7 +67,7 @@ class OrderManagementService:
     def __init__(
         self,
         risk_engine: PreTradeRiskEngine,
-        order_store: InMemoryOrderStore,
+        order_store: OrderStore,
         metric_hook: Optional[MetricHook] = None,
         event_hook: Optional[EventHook] = None,
     ) -> None:

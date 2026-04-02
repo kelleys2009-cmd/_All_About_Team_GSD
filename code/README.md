@@ -85,6 +85,11 @@
 - Integrates risk gating via `PreTradeRiskEngine`.
 - Emits structured metric/event hooks for acceptance, duplicates, and risk rejections.
 
+`trading/order_store.py`
+- SQLite-backed OMS order persistence keyed by `client_order_id`.
+- Supports deterministic upsert/get semantics for idempotent order admission.
+- Includes schema bootstrap helper for local runtime bring-up.
+
 ## Tests
 
 ```bash
@@ -97,6 +102,7 @@ PYTHONPATH=. python3 -m unittest tests/test_notifier_slo_policy.py
 PYTHONPATH=. python3 -m unittest tests/test_notifier_slo_state_store.py
 PYTHONPATH=. python3 -m unittest tests/test_risk_controls.py
 PYTHONPATH=. python3 -m unittest tests/test_oms.py
+PYTHONPATH=. python3 -m unittest tests/test_order_store.py
 ```
 
 Postgres integration harness (runs only when DSN is provided):
