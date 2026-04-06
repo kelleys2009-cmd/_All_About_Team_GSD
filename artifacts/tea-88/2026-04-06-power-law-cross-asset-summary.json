@@ -1,0 +1,190 @@
+{
+  "generated_at_utc": "2026-04-06T06:22:44.410776+00:00",
+  "method": "OLS on log(price) vs log(age_days_since_genesis)",
+  "symbols": [
+    "BTC",
+    "ETH",
+    "XRP",
+    "SOL",
+    "DOGE"
+  ],
+  "metrics": [
+    {
+      "start": "2014-09-17",
+      "end": "2026-04-06",
+      "obs": 4219,
+      "exponent_b": 5.917166896786061,
+      "intercept_a": -39.97633701164612,
+      "r2": 0.9206834139140695,
+      "doubling_age_pct": 0.12427876500681578,
+      "implied_days_to_double_now": 783.2047770729531,
+      "latest_price": 69220.3203125,
+      "model_fair_value": 132021.67418398074,
+      "price_to_fair": 0.5243102751146529,
+      "residual_percentile": 0.04930078217587106,
+      "residual_q10_mult": 0.5506695481390385,
+      "residual_q50_mult": 0.8828145271559064,
+      "residual_q90_mult": 2.215147648417984,
+      "symbol": "BTC",
+      "ticker": "BTC-USD",
+      "genesis_date": "2009-01-03"
+    },
+    {
+      "start": "2017-11-09",
+      "end": "2026-04-06",
+      "obs": 3070,
+      "exponent_b": 4.881878153868179,
+      "intercept_a": -42.28580216586168,
+      "r2": 0.6885375832979101,
+      "doubling_age_pct": 0.1525578752244494,
+      "implied_days_to_double_now": 687.1206700109202,
+      "latest_price": 0.09247961640357971,
+      "model_fair_value": 0.2964364337188835,
+      "price_to_fair": 0.3119711542990696,
+      "residual_percentile": 0.14136807817589578,
+      "residual_q10_mult": 0.23560935024224963,
+      "residual_q50_mult": 0.9221757045974115,
+      "residual_q90_mult": 4.57539973585792,
+      "symbol": "DOGE",
+      "ticker": "DOGE-USD",
+      "genesis_date": "2013-12-06"
+    },
+    {
+      "start": "2017-11-09",
+      "end": "2026-04-06",
+      "obs": 3070,
+      "exponent_b": 2.0752394285970945,
+      "intercept_a": -8.991635324504376,
+      "r2": 0.5831730393815584,
+      "doubling_age_pct": 0.39655472612922105,
+      "implied_days_to_double_now": 1547.7530960823497,
+      "latest_price": 2133.763427734375,
+      "model_fair_value": 3531.7851219132112,
+      "price_to_fair": 0.6041600363780029,
+      "residual_percentile": 0.24625407166123778,
+      "residual_q10_mult": 0.35573243183169767,
+      "residual_q50_mult": 0.9797869474402039,
+      "residual_q90_mult": 2.825306672479148,
+      "symbol": "ETH",
+      "ticker": "ETH-USD",
+      "genesis_date": "2015-07-30"
+    },
+    {
+      "start": "2020-04-10",
+      "end": "2026-04-06",
+      "obs": 2187,
+      "exponent_b": 1.5073655403079416,
+      "intercept_a": -6.439347760777448,
+      "r2": 0.6916615993871218,
+      "doubling_age_pct": 0.5838207746137059,
+      "implied_days_to_double_now": 1291.4115534455173,
+      "latest_price": 81.86845397949219,
+      "model_fair_value": 175.88979147486893,
+      "price_to_fair": 0.46545313001402655,
+      "residual_percentile": 0.23548239597622314,
+      "residual_q10_mult": 0.30167988756094954,
+      "residual_q50_mult": 1.07052078613106,
+      "residual_q90_mult": 3.075555826595787,
+      "symbol": "SOL",
+      "ticker": "SOL-USD",
+      "genesis_date": "2020-03-16"
+    },
+    {
+      "start": "2017-11-09",
+      "end": "2026-04-06",
+      "obs": 3070,
+      "exponent_b": 1.5313978129811583,
+      "intercept_a": -12.972666165711505,
+      "r2": 0.28930427509934176,
+      "doubling_age_pct": 0.5724326114779321,
+      "implied_days_to_double_now": 2894.219283632425,
+      "latest_price": 1.3434003591537476,
+      "model_fair_value": 1.0915526997492127,
+      "price_to_fair": 1.2307242329778467,
+      "residual_percentile": 0.6504885993485342,
+      "residual_q10_mult": 0.4960956315784375,
+      "residual_q50_mult": 0.8602835657380987,
+      "residual_q90_mult": 2.500558337770948,
+      "symbol": "XRP",
+      "ticker": "XRP-USD",
+      "genesis_date": "2012-06-02"
+    }
+  ],
+  "trailing_returns": [
+    {
+      "symbol": "BTC",
+      "horizon_days": 365,
+      "return": -0.17106174851107914
+    },
+    {
+      "symbol": "BTC",
+      "horizon_days": 730,
+      "return": 0.020382190105096898
+    },
+    {
+      "symbol": "BTC",
+      "horizon_days": 1095,
+      "return": 1.4682632011477441
+    },
+    {
+      "symbol": "DOGE",
+      "horizon_days": 365,
+      "return": -0.4528707482273536
+    },
+    {
+      "symbol": "DOGE",
+      "horizon_days": 730,
+      "return": -0.47904089228005875
+    },
+    {
+      "symbol": "DOGE",
+      "horizon_days": 1095,
+      "return": 0.08274730772199979
+    },
+    {
+      "symbol": "ETH",
+      "horizon_days": 365,
+      "return": 0.18150332964210492
+    },
+    {
+      "symbol": "ETH",
+      "horizon_days": 730,
+      "return": -0.35708430256123336
+    },
+    {
+      "symbol": "ETH",
+      "horizon_days": 1095,
+      "return": 0.13926940669030308
+    },
+    {
+      "symbol": "SOL",
+      "horizon_days": 365,
+      "return": -0.3192321793370593
+    },
+    {
+      "symbol": "SOL",
+      "horizon_days": 730,
+      "return": -0.5308438666888303
+    },
+    {
+      "symbol": "SOL",
+      "horizon_days": 1095,
+      "return": 2.9722437618936697
+    },
+    {
+      "symbol": "XRP",
+      "horizon_days": 365,
+      "return": -0.3733354204990068
+    },
+    {
+      "symbol": "XRP",
+      "horizon_days": 730,
+      "return": 1.2865494572385106
+    },
+    {
+      "symbol": "XRP",
+      "horizon_days": 1095,
+      "return": 1.6691947916724645
+    }
+  ]
+}
