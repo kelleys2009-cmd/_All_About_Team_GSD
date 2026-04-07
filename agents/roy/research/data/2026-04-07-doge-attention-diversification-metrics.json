@@ -1,0 +1,138 @@
+{
+  "as_of": "2026-04-07",
+  "sample_start": "2024-04-09",
+  "sample_end": "2026-04-02",
+  "n_days": 385,
+  "rolling_corr_summary": [
+    {
+      "asset": "BTC",
+      "latest_90d_corr": 0.864,
+      "mean_90d_corr": 0.812,
+      "min_90d_corr": 0.761,
+      "max_90d_corr": 0.864
+    },
+    {
+      "asset": "ETH",
+      "latest_90d_corr": 0.889,
+      "mean_90d_corr": 0.805,
+      "min_90d_corr": 0.644,
+      "max_90d_corr": 0.896
+    },
+    {
+      "asset": "SOL",
+      "latest_90d_corr": 0.875,
+      "mean_90d_corr": 0.799,
+      "min_90d_corr": 0.631,
+      "max_90d_corr": 0.914
+    },
+    {
+      "asset": "XRP",
+      "latest_90d_corr": 0.872,
+      "mean_90d_corr": 0.664,
+      "min_90d_corr": 0.293,
+      "max_90d_corr": 0.919
+    },
+    {
+      "asset": "SPX",
+      "latest_90d_corr": 0.367,
+      "mean_90d_corr": 0.439,
+      "min_90d_corr": 0.285,
+      "max_90d_corr": 0.562
+    }
+  ],
+  "portfolio_metrics": [
+    {
+      "portfolio": "0% DOGE",
+      "ann_return": -0.05495390159410518,
+      "ann_vol": 0.6618175668418751,
+      "sharpe": -0.08303481857748127,
+      "max_drawdown": -0.5867348387657909
+    },
+    {
+      "portfolio": "5% DOGE",
+      "ann_return": -0.06006061267890006,
+      "ann_vol": 0.6683970334348498,
+      "sharpe": -0.08985768888029379,
+      "max_drawdown": -0.5898601966828263
+    },
+    {
+      "portfolio": "10% DOGE",
+      "ann_return": -0.06513980401052122,
+      "ann_vol": 0.6757228817876011,
+      "sharpe": -0.09640017493294908,
+      "max_drawdown": -0.593004080265656
+    }
+  ],
+  "subscriber_growth_1y": {
+    "DOGE": {
+      "latest": 2443107.0,
+      "baseline_1y": 2373369.0,
+      "growth_1y_pct": 2.938354718545666
+    },
+    "BTC": {
+      "latest": 5976131.0,
+      "baseline_1y": 4753841.0,
+      "growth_1y_pct": 25.711629816815496
+    },
+    "ETH": {
+      "latest": 2625411.0,
+      "baseline_1y": 1592456.0,
+      "growth_1y_pct": 64.86552846672058
+    }
+  },
+  "social_sensitivity_weekly": {
+    "DOGE": {
+      "google_trends": {
+        "best_lag_weeks": 1,
+        "best_corr": 0.4475957083511496,
+        "same_week_corr": 0.24841992667600302,
+        "n": 52
+      },
+      "reddit_comments": {
+        "best_lag_weeks": null,
+        "best_corr": null,
+        "same_week_corr": null,
+        "n": 0
+      }
+    },
+    "BTC": {
+      "google_trends": {
+        "best_lag_weeks": 1,
+        "best_corr": -0.2015906552121642,
+        "same_week_corr": -0.18087754395289907,
+        "n": 52
+      },
+      "reddit_comments": {
+        "best_lag_weeks": null,
+        "best_corr": null,
+        "same_week_corr": null,
+        "n": 0
+      }
+    },
+    "ETH": {
+      "google_trends": {
+        "best_lag_weeks": 1,
+        "best_corr": 0.3978350224739213,
+        "same_week_corr": 0.194676808000704,
+        "n": 52
+      },
+      "reddit_comments": {
+        "best_lag_weeks": null,
+        "best_corr": null,
+        "same_week_corr": null,
+        "n": 0
+      }
+    }
+  },
+  "ratio_event_stats": {
+    "ratio_spike_threshold_95p": 0.05055385724900737,
+    "num_spike_days": 37,
+    "avg_gtrend_change_near_spikes": 0.002095441800895296,
+    "avg_reddit_comment_change_near_spikes": null,
+    "avg_gtrend_change_all_days": 0.0013586080255581139,
+    "avg_reddit_comment_change_all_days": 0.17247123727131194
+  },
+  "notes": {
+    "x_mentions": "X/Twitter historical mention counts unavailable without paid/credentialed API in this environment; proxy used: Reddit comment volume."
+  }
+}
