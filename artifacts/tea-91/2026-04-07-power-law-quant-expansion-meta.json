@@ -1,0 +1,10 @@
+{
+  "liquidity_threshold_24h_usd": 10000000,
+  "history_threshold_days": 365,
+  "universe_rows": 120,
+  "eligible_rows": 82,
+  "nonstable_rows": 73,
+  "btc_reference_exponent_b": 1.6998193003197297,
+  "btc_reference_r2": 0.7819491016506144,
+  "generated_date": "2026-04-07"
+}
